@@ -1,13 +1,13 @@
-package com.jloom.commands;
+package com.jloom.util;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-final class ProjectPaths {
+public final class ProjectPaths {
 
     private ProjectPaths() { }
 
-    static boolean isEmpty(Path dir) {
+    public static boolean isEmpty(Path dir) {
         if (!Files.isDirectory(dir)) return true;
         try (var stream = Files.list(dir)) {
             return stream.findAny().isEmpty();
@@ -16,7 +16,7 @@ final class ProjectPaths {
         }
     }
 
-    static void requireEmpty(Path target) {
+    public static void requireEmpty(Path target) {
         if (!isEmpty(target)) {
             throw new IllegalArgumentException(
                     "'" + target.toAbsolutePath() + "' already exists and isn't empty — "

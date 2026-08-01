@@ -21,15 +21,15 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
-    implementation("org.springframework.shell:spring-shell-starter:4.0.3")
-    implementation("org.springframework.shell:spring-shell-jline:4.0.3")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("info.picocli:picocli:4.7.7")
+    implementation("org.jline:jline:3.30.13")
 
     implementation("org.yaml:snakeyaml:2.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.shell:spring-shell-test:4.0.3")
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("org.testcontainers:postgresql:1.21.4")
     testImplementation("org.postgresql:postgresql:42.7.13")
