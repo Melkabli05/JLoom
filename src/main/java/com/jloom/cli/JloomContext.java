@@ -42,5 +42,5 @@ public class JloomContext {
     public ArchetypeRegistry archetypes() { return archetypes; }
     public ProjectStateStore stateStore() { return stateStore; }
     public Terminal terminal() { return terminal; }
-    public JloomPrompts prompts() { return new JloomPrompts(terminal); }
+    public JloomPrompts prompts() { return new JloomPrompts(); }
 }

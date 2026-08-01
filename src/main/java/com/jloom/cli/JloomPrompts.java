@@ -1,23 +1,18 @@
 package com.jloom.cli;
 
-import org.jline.terminal.Terminal;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
 public class JloomPrompts {
 
-    private final Terminal terminal;
     private final Scanner scanner = new Scanner(System.in);
 
-    public JloomPrompts(Terminal terminal) {
-        this.terminal = terminal;
+    public JloomPrompts() {
     }
 
-    public boolean isInteractive() {
-        String type = terminal.getType();
-        return !"dumb".equals(type) && !"dumb-color".equals(type);
+    public static boolean isInteractive() {
+        return System.console() != null;
     }
 
     public String requireText(String provided, String promptLabel, String prompt, String defaultValue) {
