@@ -26,6 +26,34 @@ final class ReadCommands {
         this.archetypes = archetypes;
     }
 
+    @Command(name = "help", description = "Show available commands. Run with no args, this is the default action.", exitStatusExceptionMapper = "jloomExitStatusMapper")
+    public String help() {
+        return """
+                jloom — generate and evolve production-ready backends
+
+                Usage:
+                  jloom <command> [options]
+
+                Commands:
+                  new       Create a new project (interactive or via flags)
+                  add       Add a module to an existing project
+                  list      List available modules, services, or archetypes
+                  info      Show what a module does before applying it
+                  status    Show what modules are applied and which can be upgraded
+                  upgrade   Pull newer versions of one or more modules
+                  config    Print the resolved jloom configuration
+                  help      Show this message
+
+                Examples:
+                  jloom new --name my-app --service file-service
+                  jloom add postgres flyway --set postgres.db_name=demo
+                  jloom list
+                  jloom info --module postgres
+                  jloom upgrade
+
+                Run 'jloom <command> --help' for command-specific options.""";
+    }
+
     @Command(name = "list", description = "List available modules, services, or archetypes.", exitStatusExceptionMapper = "jloomExitStatusMapper",
             completionProvider = "jloomCompletionList")
     public String list(
