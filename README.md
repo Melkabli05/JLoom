@@ -6,6 +6,16 @@ from individual capabilities (database, auth, observability, etc.).
 
 ## Install
 
+### One command (recommended)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Melkabli05/JLoom/main/install.sh | bash
+```
+
+Clones the repo, builds with Gradle, and adds `jloom` to your PATH.
+
+### From a clone
+
 ```bash
 git clone https://github.com/Melkabli05/JLoom.git
 cd JLoom
