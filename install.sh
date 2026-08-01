@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # jloom installer — clones the repo, builds the CLI, and configures executables.
-# Works on Linux and macOS with bash (4.0+ or system bash), git, and JDK 25+.
+# Works on Linux and macOS with bash 4.0+, git, and JDK 25+.
+#
+# Quick start (no install required):
+#   curl -sSL https://raw.githubusercontent.com/Melkabli05/JLoom/main/install.sh | bash
 #
 # SECURITY MODEL
 #   - This script runs `git clone` and then executes the cloned `gradlew` (a shell
@@ -14,15 +17,21 @@
 #     root without that flag). The per-user ~/.local/bin path is always preferred.
 #   - Shell RC files (~/.bashrc / ~/.zshrc / config.fish) are only edited when no
 #     symlink could be created, AND --no-modify-path wasn't passed.
+#
+# --self-update re-fetches the latest version of THIS SCRIPT from the
+# remote before doing anything else. Use it after editing install.sh
+# upstream to roll out a new version without manually re-cloning.
 
 set -euo pipefail
 
 REPO_URL="${JLOOM_REPO:-https://github.com/Melkabli05/JLoom.git}"
 REF="${JLOOM_REF:-main}"
 USE_LATEST=0
+SELF_UPDATE=0
 INSTALL_DIR="${JLOOM_INSTALL_DIR:-$HOME/.jloom}"
 AUTO_SYMLINK=1
 MODIFY_RC=1
+NO_TESTS=0
 
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
     RED='\033[0;31m'
@@ -44,13 +53,15 @@ usage() {
 Usage: install.sh [options]
 
 Options:
-  --latest            Track default branch HEAD (less safe; sees unreviewed commits)
-  --ref <git-ref>     Pin to a specific commit/tag/branch (default: ${REF})
-  --dir <path>        Install location (default: $HOME/.jloom)
-  --no-symlink        Skip symlinking to ~/.local/bin or /usr/local/bin
-  --no-modify-path    Do not edit shell RC files (~/.bashrc, ~/.zshrc, etc.)
-  --system-install    Symlink into /usr/local/bin (requires write access; opt-in)
-  -h, --help          Show this help
+  --latest           Track default branch HEAD (less safe; sees unreviewed commits)
+  --ref <git-ref>    Pin to a specific commit/tag/branch (default: ${REF})
+  --dir <path>       Install location (default: $HOME/.jloom)
+  --no-tests         Skip running the test suite during build (faster)
+  --no-symlink       Skip symlinking to ~/.local/bin or /usr/local/bin
+  --no-modify-path   Do not edit shell RC files (~/.bashrc, ~/.zshrc, etc.)
+  --system-install   Symlink into /usr/local/bin (requires write access; opt-in)
+  --self-update      Re-fetch this script from the remote before running
+  -h, --help         Show this help
 
 Environment overrides:
   JLOOM_REPO           Git URL to clone from
@@ -58,25 +69,48 @@ Environment overrides:
   JLOOM_INSTALL_DIR    Default install location
   JLOOM_SYSTEM_INSTALL Same as --system-install
   JLOOM_NO_SYMLINK     Same as --no-symlink
+  JLOOM_NO_TESTS       Same as --no-tests
 EOF
 }
 
 [ "${JLOOM_SYSTEM_INSTALL:-0}" = "1" ] && AUTO_SYMLINK=2
 [ "${JLOOM_NO_SYMLINK:-0}" = "1" ] && AUTO_SYMLINK=0
+[ "${JLOOM_NO_TESTS:-0}" = "1" ] && NO_TESTS=1
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --latest)          USE_LATEST=1; shift ;;
-        --ref)             [ $# -ge 2 ] || fail "--ref requires an argument"; REF="$2"; shift 2 ;;
-        --dir)             [ $# -ge 2 ] || fail "--dir requires an argument"; INSTALL_DIR="$2"; shift 2 ;;
-        --no-symlink)      AUTO_SYMLINK=0; shift ;;
-        --no-modify-path)  MODIFY_RC=0; shift ;;
-        --system-install)  AUTO_SYMLINK=2; shift ;;
-        -h|--help)         usage; exit 0 ;;
-        -*)                fail "Unknown option: $1 (try --help)" ;;
-        *)                 fail "Unexpected positional argument: $1" ;;
+        --latest)         USE_LATEST=1; shift ;;
+        --ref)            [ $# -ge 2 ] || fail "--ref requires an argument"; REF="$2"; shift 2 ;;
+        --dir)            [ $# -ge 2 ] || fail "--dir requires an argument"; INSTALL_DIR="$2"; shift 2 ;;
+        --no-tests)       NO_TESTS=1; shift ;;
+        --no-symlink)     AUTO_SYMLINK=0; shift ;;
+        --no-modify-path) MODIFY_RC=0; shift ;;
+        --system-install) AUTO_SYMLINK=2; shift ;;
+        --self-update)    SELF_UPDATE=1; shift ;;
+        -h|--help)        usage; exit 0 ;;
+        -*)               fail "Unknown option: $1 (try --help)" ;;
+        *)                fail "Unexpected positional argument: $1" ;;
     esac
 done
+
+# 0. Optional: re-fetch THIS SCRIPT from the remote (so the next run
+# is the latest published version, even if the local copy is stale).
+if [ "$SELF_UPDATE" = "1" ]; then
+    info "Re-fetching install.sh from $REPO_URL..."
+    SCRIPT_URL="$REPO_URL/raw/$REF/install.sh"
+    if command -v curl >/dev/null 2>&1; then
+        TMP_SCRIPT=$(mktemp)
+        if curl -fsSL "$SCRIPT_URL" -o "$TMP_SCRIPT" 2>/dev/null; then
+            info "Got updated install.sh, re-executing..."
+            exec bash "$TMP_SCRIPT" "$@"
+        else
+            warn "Could not fetch $SCRIPT_URL — continuing with local copy."
+            rm -f "$TMP_SCRIPT"
+        fi
+    else
+        warn "curl not found — cannot --self-update. Continuing with local copy."
+    fi
+fi
 
 GRADLE_INSTALL_DIR="$INSTALL_DIR/build/install/jloom"
 BIN_DIR="$INSTALL_DIR/bin"
@@ -121,12 +155,17 @@ if [ "$USE_LATEST" -eq 0 ] && [ "$REF" = "main" ]; then
     warn "Pinned to HEAD of 'main'. For immutable builds, set JLOOM_REF to a specific commit SHA or tag."
 fi
 
-# 3. Build artifact
+# 3. Build artifact (optionally with tests)
 
-info "Building jloom via Gradle..."
+info "Building jloom via Gradle${NO_TESTS:+ (skipping tests)}..."
 (
     cd "$INSTALL_DIR"
-    ./gradlew installDist --no-daemon
+    if [ "$NO_TESTS" = "0" ]; then
+        GRADLE_TASKS="installDist --no-daemon"
+    else
+        GRADLE_TASKS="installDist --no-daemon -x test -x check"
+    fi
+    ./gradlew $GRADLE_TASKS || fail "Gradle build failed"
 )
 
 TARGET_BIN="$GRADLE_INSTALL_DIR/bin/jloom"
@@ -134,7 +173,8 @@ if [ ! -x "$TARGET_BIN" ]; then
     fail "Build completed, but expected binary was not found or not executable at: $TARGET_BIN"
 fi
 
-# Atomic symlink creation for $INSTALL_DIR/bin
+# Make $INSTALL_DIR/bin the canonical location by symlinking it at the front of the
+# tree. This keeps the on-PATH entry clean (~/.jloom/bin, not ~/.jloom/build/install/jloom/bin).
 mkdir -p "$INSTALL_DIR"
 rm -rf "$BIN_DIR"
 ln -s "$GRADLE_INSTALL_DIR/bin" "$BIN_DIR"
@@ -198,14 +238,44 @@ if [ "$PATH_LINKED" -eq 0 ] && [ "$MODIFY_RC" -eq 1 ]; then
     fi
 fi
 
-# 6. Verification
+# 6. Verification — exercise multiple commands to confirm the install works
+# end-to-end, not just the simplest one (jloom list).
 
 echo
 info "Verifying installation..."
-if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" list >/dev/null 2>&1; then
-    success "jloom verified successfully."
+
+VERIFICATION_FAILED=0
+if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" --version >/dev/null 2>&1; then
+    success "jloom --version: works"
 else
-    warn "jloom installed, but runtime check failed. Run manually to debug: $BIN_DIR/jloom list"
+    warn "jloom --version failed"
+    VERIFICATION_FAILED=1
+fi
+
+if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" --help >/dev/null 2>&1; then
+    success "jloom --help: works"
+else
+    warn "jloom --help failed"
+    VERIFICATION_FAILED=1
+fi
+
+if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" list --what modules >/dev/null 2>&1; then
+    success "jloom list --what modules: works"
+else
+    warn "jloom list failed"
+    VERIFICATION_FAILED=1
+fi
+
+if [ "$VERIFICATION_FAILED" -eq 0 ]; then
+    success "All verifications passed. Install complete."
+    echo
+    info "Try:"
+    info "  ${GREEN}jloom --help${NC}            (full command list)"
+    info "  ${GREEN}jloom list${NC}              (available modules)"
+    info "  ${GREEN}jloom new --help${NC}        (project creation flags)"
+    info "  ${GREEN}jloom${NC} (no args)         (interactive REPL)"
+else
+    warn "Some verifications failed. Run manually to debug: $BIN_DIR/jloom list"
 fi
 
 echo
