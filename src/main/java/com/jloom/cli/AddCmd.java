@@ -2,7 +2,6 @@ package com.jloom.cli;
 
 import com.jloom.orchestrate.ModuleApplier;
 import com.jloom.orchestrate.ModuleApplier.ApplyResult;
-import picocli.CommandLine.Help.Ansi;
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
@@ -15,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@Command(name = "add", description = "Apply one or more modules to a project.")
-public class AddCmd implements Runnable {
+@Command(name = "add", mixinStandardHelpOptions = true, description = "Apply one or more modules to a project.")
+public class AddCmd extends CliCommand implements Runnable {
 
     @ParentCommand
     JloomCommand parent;
@@ -39,7 +38,7 @@ public class AddCmd implements Runnable {
         ModuleApplier applier = parent.context().applier();
         ApplyResult result = applier.apply(Path.of(project), moduleIds, set == null ? Map.of() : set, dryRun, null, null);
         switch (result) {
-            case ApplyResult.Applied ignored -> System.out.println(Ansi.AUTO.string("@|green ✓ Applied: " + moduleIds + "|@"));
+            case ApplyResult.Applied ignored -> System.out.println(JloomOutput.success("Applied: " + moduleIds));
             case ApplyResult.DryRun ignored -> System.out.println("Dry run — no changes written.");
             case ApplyResult.Rejected rejected -> throw new IllegalArgumentException(formatProblems(rejected.problems()));
             case ApplyResult.Failed f -> throw new IllegalStateException("OpenRewrite run failed:\n" + f.output());

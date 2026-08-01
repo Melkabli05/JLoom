@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
-@Command(name = "new", description = "Create a new project. Generates immediately; pass --dry-run to preview.")
-public class NewCmd implements Runnable {
+@Command(name = "new", mixinStandardHelpOptions = true, description = "Create a new project. Generates immediately; pass --dry-run to preview.")
+public class NewCmd extends CliCommand implements Runnable {
 
     private static final String DEFAULT_PROJECT_NAME = "my-app";
     private static final String DEFAULT_BASE_PACKAGE = "com.example.app";
@@ -71,7 +71,7 @@ public class NewCmd implements Runnable {
         JloomContext ctx = parent.context();
         JloomPrompts prompts = ctx.prompts();
 
-        if (!StringUtils.hasText(name) && prompts.isInteractive()) {
+        if (!quiet && !StringUtils.hasText(name) && prompts.isInteractive()) {
             System.out.println("Let's set up your project — press Enter on any question to accept the default.\n");
         }
         Path target = resolveTarget(name, prompts, ctx.services(), ctx.archetypes());
@@ -95,7 +95,9 @@ public class NewCmd implements Runnable {
 
         String resolvedBasePackage = prompts.promptWithDefault(basePackage, "base-package", "Base package", DEFAULT_BASE_PACKAGE);
 
-        System.out.println((dryRun ? "Previewing " : "Setting up ") + target + "...");
+        if (!quiet) {
+            System.out.println((dryRun ? "Previewing " : "Setting up ") + target + "...");
+        }
         ApplyResult result = ctx.applier().apply(target, moduleIds, archetypeAnswers, dryRun,
                 resolvedBasePackage, target.getFileName().toString());
         switch (result) {

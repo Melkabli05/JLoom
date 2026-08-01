@@ -9,8 +9,8 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
 @Component
-@Command(name = "info", description = "Show what a module changes before applying it.")
-public class InfoCmd implements Runnable {
+@Command(name = "info", mixinStandardHelpOptions = true, description = "Show what a module changes before applying it.")
+public class InfoCmd extends CliCommand implements Runnable {
 
     @ParentCommand
     JloomCommand parent;

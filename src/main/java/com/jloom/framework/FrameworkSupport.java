@@ -46,7 +46,7 @@ public sealed interface FrameworkSupport
         @Override public String displayName() { return "Micronaut 4"; }
         @Override public String currentVersion() { return "4.x"; }
         @Override public String buildDsl() { return "gradle-groovy"; }
-        @Override public String smokeModule() { return "micronaut-base"; }
+        @Override public String smokeModule() { return "base-micronaut"; }
 
         @Override
         public boolean supports(String capabilityId) {

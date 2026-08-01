@@ -1,14 +1,26 @@
 package com.jloom.cli;
 
+import org.jline.reader.EndOfFileException;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.UserInterruptException;
+import org.jline.terminal.Terminal;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
+/**
+ * Wizard-style prompts for {@code jloom new}. Reads through the same JLine
+ * {@link Terminal} the REPL uses (rather than a separate {@code Scanner} over
+ * {@code System.in}), so there is exactly one line-reading stack regardless
+ * of whether the wizard runs standalone or from inside the REPL.
+ */
 public class JloomPrompts {
 
-    private final Scanner scanner = new Scanner(System.in);
+    private final LineReader reader;
 
-    public JloomPrompts() {
+    public JloomPrompts(Terminal terminal) {
+        this.reader = LineReaderBuilder.builder().terminal(terminal).build();
     }
 
     public static boolean isInteractive() {
@@ -23,9 +35,8 @@ public class JloomPrompts {
             throw new IllegalArgumentException("--" + promptLabel + " is required (no interactive terminal to prompt on)");
         }
         System.out.println(prompt);
-        System.out.print(promptLabel + " [" + defaultValue + "]: ");
-        String line = scanner.nextLine();
-        return (line == null || line.isBlank()) ? defaultValue : line.trim();
+        String line = readLine(promptLabel + " [" + defaultValue + "]: ");
+        return line.isBlank() ? defaultValue : line.trim();
     }
 
     public String promptWithDefault(String provided, String promptLabel, String prompt, String defaultValue) {
@@ -36,9 +47,8 @@ public class JloomPrompts {
             return defaultValue;
         }
         System.out.println(prompt);
-        System.out.print(promptLabel + " [" + defaultValue + "]: ");
-        String line = scanner.nextLine();
-        return (line == null || line.isBlank()) ? defaultValue : line.trim();
+        String line = readLine(promptLabel + " [" + defaultValue + "]: ");
+        return line.isBlank() ? defaultValue : line.trim();
     }
 
     public String chooseOptional(String provided, String promptLabel, String prompt,
@@ -55,9 +65,8 @@ public class JloomPrompts {
             System.out.println("  " + (i + 1) + ") " + labels.get(i));
         }
         System.out.println("  0) " + noneLabel);
-        System.out.print("Choose [0-" + labels.size() + "]: ");
-        String line = scanner.nextLine();
-        if (line == null || line.isBlank() || "0".equals(line.trim())) {
+        String line = readLine("Choose [0-" + labels.size() + "]: ");
+        if (line.isBlank() || "0".equals(line.trim())) {
             return null;
         }
         try {
@@ -85,9 +94,8 @@ public class JloomPrompts {
             String marker = labels.get(i).equals(defaultLabel) ? " (default)" : "";
             System.out.println("  " + (i + 1) + ") " + labels.get(i) + marker);
         }
-        System.out.print("Choose [1-" + labels.size() + "]: ");
-        String line = scanner.nextLine();
-        if (line == null || line.isBlank()) {
+        String line = readLine("Choose [1-" + labels.size() + "]: ");
+        if (line.isBlank()) {
             return defaultId;
         }
         try {
@@ -110,9 +118,8 @@ public class JloomPrompts {
         for (int i = 0; i < labels.size(); i++) {
             System.out.printf("  [%s] %d) %s%n", selected[i] ? "x" : " ", (i + 1), labels.get(i));
         }
-        System.out.print("Toggle which? (e.g. '1 3' to toggle 1 and 3, blank to confirm): ");
-        String line = scanner.nextLine();
-        if (line == null || line.isBlank()) {
+        String line = readLine("Toggle which? (e.g. '1 3' to toggle 1 and 3, blank to confirm): ");
+        if (line.isBlank()) {
             return java.util.stream.IntStream.range(0, labels.size())
                     .filter(i -> selected[i])
                     .mapToObj(i -> choices.get(labels.get(i)))
@@ -131,5 +138,13 @@ public class JloomPrompts {
                 .filter(i -> selected[i])
                 .mapToObj(i -> choices.get(labels.get(i)))
                 .toList();
+    }
+
+    private String readLine(String prompt) {
+        try {
+            return reader.readLine(prompt);
+        } catch (EndOfFileException | UserInterruptException e) {
+            return "";
+        }
     }
 }

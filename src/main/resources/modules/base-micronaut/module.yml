@@ -1,4 +1,4 @@
-# micronaut-base — the minimal Micronaut 4 application skeleton, parallel to `base`.
+# base-micronaut — the minimal Micronaut 4 application skeleton, parallel to `base`.
 #
 # Distinct from `base` (Spring Boot) — same role (file-only seed for new projects), different
 # implementation. OpenRewrite's rewriteRun still requires ./gradlew to exist before any
@@ -8,7 +8,7 @@
 # The Micronaut v0.1 surface here is intentionally minimal: just enough to produce a
 # runnable `Application.java` + application.yml + gradle wrapper. Notification-service,
 # user-service, identity-service Micronaut variants land in Phase 3+ (dev-roadmap.md).
-id: micronaut-base
+id: base-micronaut
 version: 1.0.0
 requires: []
 conflicts: []

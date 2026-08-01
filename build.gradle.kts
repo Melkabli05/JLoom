@@ -38,6 +38,9 @@ dependencies {
 
 application {
     mainClass.set("com.jloom.Main")
+    // JLine's FFM terminal provider needs native access; without this the JVM prints
+    // an "illegal native access" warning to stderr on every single invocation.
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
 tasks.test {

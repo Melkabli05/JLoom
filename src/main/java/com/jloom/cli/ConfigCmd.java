@@ -6,8 +6,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
 @Component
-@Command(name = "config", description = "Print the resolved jloom configuration (env vars + defaults).")
-public class ConfigCmd implements Runnable {
+@Command(name = "config", mixinStandardHelpOptions = true, description = "Print the resolved jloom configuration (env vars + defaults).")
+public class ConfigCmd extends CliCommand implements Runnable {
 
     @ParentCommand
     JloomCommand parent;

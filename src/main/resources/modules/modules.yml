@@ -4,7 +4,7 @@
 # com.jloom.registry.CatalogRoots.
 modules:
   - base
-  - micronaut-base
+  - base-micronaut
   - postgres
   - mysql
   - mariadb

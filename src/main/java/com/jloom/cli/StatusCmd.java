@@ -12,8 +12,8 @@ import picocli.CommandLine.ParentCommand;
 import java.nio.file.Path;
 
 @Component
-@Command(name = "status", description = "Show applied modules and whether newer versions exist.")
-public class StatusCmd implements Runnable {
+@Command(name = "status", mixinStandardHelpOptions = true, description = "Show applied modules and whether newer versions exist.")
+public class StatusCmd extends CliCommand implements Runnable {
 
     @ParentCommand
     JloomCommand parent;

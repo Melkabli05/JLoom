@@ -2,7 +2,6 @@ package com.jloom.cli;
 
 import com.jloom.orchestrate.UpgradeEngine;
 import com.jloom.orchestrate.UpgradeEngine.UpgradeResult;
-import picocli.CommandLine.Help.Ansi;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -11,8 +10,8 @@ import picocli.CommandLine.ParentCommand;
 import java.nio.file.Path;
 
 @Component
-@Command(name = "upgrade", description = "Upgrade applied modules to the catalog's current versions.")
-public class UpgradeCmd implements Runnable {
+@Command(name = "upgrade", mixinStandardHelpOptions = true, description = "Upgrade applied modules to the catalog's current versions.")
+public class UpgradeCmd extends CliCommand implements Runnable {
 
     @ParentCommand
     JloomCommand parent;
@@ -33,7 +32,7 @@ public class UpgradeCmd implements Runnable {
         switch (result) {
             case UpgradeResult.UpToDate ignored -> System.out.println("Already up to date.");
             case UpgradeResult.Upgraded upgraded -> {
-                System.out.println(Ansi.AUTO.string("@|green ✓ Upgraded:|@"));
+                System.out.println(JloomOutput.success("Upgraded:"));
                 for (String change : upgraded.changes()) {
                     System.out.println("  " + change);
                 }

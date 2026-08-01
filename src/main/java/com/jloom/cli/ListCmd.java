@@ -10,10 +10,12 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
-@Command(name = "list", description = "List available modules, services, or archetypes.")
-public class ListCmd implements Runnable {
+@Command(name = "list", mixinStandardHelpOptions = true, description = "List available modules, services, or archetypes.")
+public class ListCmd extends CliCommand implements Runnable {
 
     @Option(names = "--what",
             defaultValue = "modules",
@@ -35,38 +37,56 @@ public class ListCmd implements Runnable {
     }
 
     private void listModules(ModuleRegistry modules) {
-        String body = modules.all().stream()
-                .map(ListCmd::formatModuleLine)
+        List<ModuleManifest> sorted = modules.all().stream()
+                .sorted(Comparator.comparing(ModuleManifest::id))
+                .toList();
+        int idWidth = widthOf(sorted, ModuleManifest::id);
+        int versionWidth = widthOf(sorted, ModuleManifest::version);
+        String body = sorted.stream()
+                .map(m -> formatModuleLine(m, idWidth, versionWidth))
                 .collect(Collectors.joining("\n"));
         System.out.println("Available modules:\n" + body);
     }
 
     private void listServices(ServiceRegistry services) {
-        String body = services.all().stream()
-                .map(ListCmd::formatServiceLine)
+        List<ServiceManifest> sorted = services.all().stream()
+                .sorted(Comparator.comparing(ServiceManifest::id))
+                .toList();
+        int idWidth = widthOf(sorted, ServiceManifest::id);
+        int nameWidth = widthOf(sorted, ServiceManifest::displayName);
+        String body = sorted.stream()
+                .map(s -> formatServiceLine(s, idWidth, nameWidth))
                 .collect(Collectors.joining("\n"));
         System.out.println("Available services:\n" + body);
     }
 
     private void listArchetypes(ArchetypeRegistry archetypes) {
-        String body = archetypes.all().stream()
-                .map(ListCmd::formatArchetypeLine)
+        List<ArchetypeManifest> sorted = archetypes.all().stream()
+                .sorted(Comparator.comparing(ArchetypeManifest::id))
+                .toList();
+        int idWidth = widthOf(sorted, ArchetypeManifest::id);
+        String body = sorted.stream()
+                .map(a -> formatArchetypeLine(a, idWidth))
                 .collect(Collectors.joining("\n"));
         System.out.println("Available archetypes:\n" + body);
     }
 
-    private static String formatModuleLine(ModuleManifest m) {
+    private static <T> int widthOf(List<T> items, java.util.function.Function<T, String> field) {
+        return items.stream().mapToInt(item -> field.apply(item).length()).max().orElse(0);
+    }
+
+    private static String formatModuleLine(ModuleManifest m, int idWidth, int versionWidth) {
         String provides = m.provides() == null ? "" : "  provides=" + m.provides();
         String requires = m.requires().isEmpty() ? "" : "  requires=" + m.requires();
-        return String.format("  %-20s %-10s%s%s", m.id(), m.version(), provides, requires);
+        return String.format("  %-" + idWidth + "s  %-" + versionWidth + "s%s%s", m.id(), m.version(), provides, requires);
     }
 
-    private static String formatServiceLine(ServiceManifest s) {
-        return String.format("  %-25s %-25s frameworks=%s", s.id(), s.displayName(), s.framework());
+    private static String formatServiceLine(ServiceManifest s, int idWidth, int nameWidth) {
+        return String.format("  %-" + idWidth + "s  %-" + nameWidth + "s  frameworks=%s", s.id(), s.displayName(), s.framework());
     }
 
-    private static String formatArchetypeLine(ArchetypeManifest a) {
-        return String.format("  %-25s modules=%s", a.id(), a.modules());
+    private static String formatArchetypeLine(ArchetypeManifest a, int idWidth) {
+        return String.format("  %-" + idWidth + "s  modules=%s", a.id(), a.modules());
     }
 
     static class WhatCandidates implements Iterable<String> {

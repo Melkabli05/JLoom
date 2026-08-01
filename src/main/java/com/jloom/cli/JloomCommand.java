@@ -24,6 +24,15 @@ import picocli.CommandLine.Spec;
                 NewCmd.class, AddCmd.class, ListCmd.class, InfoCmd.class,
                 StatusCmd.class, UpgradeCmd.class, ConfigCmd.class, HelpCmd.class,
                 InteractiveCmd.class
+        },
+        footer = {
+                "",
+                "Examples:",
+                "  jloom new --name my-app --service file-service --base-package com.acme.demo",
+                "  jloom add postgres flyway --set postgres.db_name=demo",
+                "  jloom list",
+                "  jloom info --module postgres",
+                "  jloom upgrade"
         }
 )
 public class JloomCommand {

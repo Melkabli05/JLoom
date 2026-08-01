@@ -7,7 +7,7 @@
 # lands in Phase 3.5+ when the Spring Boot Kafka adapter ships.
 id: notification-micronaut
 version: 1.0.0
-requires: [micronaut-base]
+requires: [base-micronaut]
 conflicts: []
 prompts: []
 mergeRecipes:

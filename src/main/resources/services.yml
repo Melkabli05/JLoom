@@ -9,7 +9,7 @@ services:
     framework: [spring-boot, micronaut]
     modules:
       spring-boot: [base, postgres, flyway, jwt-auth, validation, async, scheduling, otel-tracing, problem-details, notification-service]
-      micronaut:   [micronaut-base, notification-micronaut]
+      micronaut:   [base-micronaut, notification-micronaut]
   - id: user-service
     displayName: User Service
     description: >
@@ -19,7 +19,7 @@ services:
     framework: [spring-boot, micronaut]
     modules:
       spring-boot: [base, postgres, flyway, jwt-auth, validation, otel-tracing, problem-details, user-service]
-      micronaut:   [micronaut-base, user-micronaut]
+      micronaut:   [base-micronaut, user-micronaut]
   - id: identity-service
     displayName: Identity Service
     description: >
@@ -35,7 +35,7 @@ services:
       Bare Micronaut 4 application skeleton. Per-service Micronaut variants land as their
       Spring Boot siblings do — currently notification-service + user-service.
     framework: [micronaut]
-    modules: [micronaut-base]
+    modules: [base-micronaut]
   - id: file-service
     displayName: File / Media Service
     description: >

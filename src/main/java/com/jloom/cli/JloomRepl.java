@@ -1,9 +1,9 @@
 package com.jloom.cli;
 
 import org.jline.terminal.Terminal;
+import picocli.CommandLine;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -50,23 +50,7 @@ public final class JloomRepl {
                 .variable(org.jline.reader.LineReader.HISTORY_FILE,
                         Path.of(System.getProperty("user.home"), ".jloom", "history"))
                 .build();
-        picocli.CommandLine cmd = new picocli.CommandLine(new JloomCommand(context))
-                .setOut(new PrintWriter(System.out, true))
-                .setErr(new PrintWriter(System.err, true))
-                .setExecutionExceptionHandler((ex, c, p) -> {
-                    Throwable cc = ex.getCause() != null ? ex.getCause() : ex;
-                    c.getErr().println(picocli.CommandLine.Help.Ansi.AUTO.string("@|red ✗ " + cc.getMessage() + "|@"));
-                    return c.getCommandSpec().exitCodeOnExecutionException();
-                })
-                .setParameterExceptionHandler((ex, args) -> {
-                    String msg = ex instanceof picocli.CommandLine.UnmatchedArgumentException uae
-                            ? "Unknown argument: " + uae.getUnmatched().get(0)
-                            : ex.getMessage();
-                    ex.getCommandLine().getErr().println(picocli.CommandLine.Help.Ansi.AUTO.string("@|red ✗ " + msg + "|@"));
-                    ex.getCommandLine().getErr().println();
-                    ex.getCommandLine().getErr().println("Run 'jloom --help' for usage.");
-                    return ex.getCommandLine().getCommandSpec().exitCodeOnInvalidInput();
-                });
+        CommandLine cmd = JloomCommandLine.create(new JloomCommand(context));
         try {
             String line;
             while ((line = reader.readLine("jloom> ")) != null) {
