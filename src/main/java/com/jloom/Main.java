@@ -21,6 +21,16 @@ public final class Main {
             JloomCommand root = spring.getBean(JloomCommand.class);
             JloomContext context = spring.getBean(JloomContext.class);
             Terminal terminal = spring.getBean(Terminal.class);
+
+            // No args → drop into the interactive REPL. We do this BEFORE invoking
+            // Picocli.execute() because a subcommand list with mixinStandardHelpOptions
+            // requires a subcommand (Picocli would otherwise emit 'Missing required
+            // subcommand'). Routing to the REPL is the more useful default.
+            if (args.length == 0) {
+                JloomRepl.run(terminal, context);
+                System.exit(0);
+            }
+
             int exitCode = new CommandLine(root)
                     .setOut(new java.io.PrintWriter(System.out, true))
                     .setErr(new java.io.PrintWriter(System.err, true))
@@ -41,9 +51,6 @@ public final class Main {
                     .setCaseInsensitiveEnumValuesAllowed(true)
                     .setUnmatchedArgumentsAllowed(false)
                     .execute(args);
-            if (exitCode == 0 && args.length == 0) {
-                JloomRepl.run(terminal, context);
-            }
             System.exit(exitCode);
         } finally {
             spring.close();
