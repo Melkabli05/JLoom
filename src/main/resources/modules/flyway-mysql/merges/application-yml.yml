@@ -1,0 +1,8 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $
+    yaml: |
+      spring:
+        flyway:
+          enabled: true
+          locations: classpath:db/migration
+    filePattern: "**/application.yml"

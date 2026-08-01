@@ -1,0 +1,10 @@
+# postgres 1.0.0 -> 1.1.0: explicit HikariCP pool sizing instead of relying on Hikari's own
+# defaults (10 max, no configured minimum idle) — worth being explicit about in a generated app
+# so the pool size is a decision the project owns, not an implicit default nobody chose.
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.datasource
+    yaml: |
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+    filePattern: "**/application.yml"

@@ -1,0 +1,8 @@
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.flywaydb
+    artifactId: flyway-core
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.flywaydb
+    artifactId: flyway-mysql
+    configuration: implementation

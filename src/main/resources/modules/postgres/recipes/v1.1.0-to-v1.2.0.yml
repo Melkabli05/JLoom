@@ -1,0 +1,13 @@
+# postgres 1.1.0 -> 1.2.0: the module used to wire only a raw JDBC driver with no ORM at all.
+# Spring Data JPA is this generator's one persistence approach (design decision, not a per-project
+# choice), so existing projects need the JPA starter added and OSIV explicitly disabled — the
+# same defaults a brand-new project gets from the current module version.
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-data-jpa
+    configuration: implementation
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.jpa
+    yaml: |
+      open-in-view: false
+    filePattern: "**/application.yml"

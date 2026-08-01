@@ -1,0 +1,31 @@
+# micronaut-base — the minimal Micronaut 4 application skeleton, parallel to `base`.
+#
+# Distinct from `base` (Spring Boot) — same role (file-only seed for new projects), different
+# implementation. OpenRewrite's rewriteRun still requires ./gradlew to exist before any
+# merge recipes can fire, so this module is file-only too — same chicken-and-egg reasoning
+# as `base`.
+#
+# The Micronaut v0.1 surface here is intentionally minimal: just enough to produce a
+# runnable `Application.java` + application.yml + gradle wrapper. Notification-service,
+# user-service, identity-service Micronaut variants land in Phase 3+ (dev-roadmap.md).
+id: micronaut-base
+version: 1.0.0
+requires: []
+conflicts: []
+prompts: []
+provides: capability:http-api
+mergeRecipes: []
+scaffold: true
+fileTemplates:
+  - settings.gradle
+  - build.gradle
+  - gradlew
+  - gradlew.bat
+  - gradle/wrapper/gradle-wrapper.properties
+  - gradle/wrapper/gradle-wrapper.jar
+  - src/main/java/{{package_path}}/Application.java
+  - src/main/resources/application.yml
+  - src/main/resources/logback.xml
+  - src/test/java/{{package_path}}/ArchitectureTest.java
+  - .gitignore
+  - README.md

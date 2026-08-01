@@ -1,0 +1,12 @@
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-security
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-oauth2-resource-server
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.security
+    artifactId: spring-security-test
+    configuration: testImplementation

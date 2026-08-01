@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.vscode/
+
+# Build outputs
+out/
+bin/
+spring-shell.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local session memory / hooks (never push)
+.remember/
+.claude/
+.claude.lock

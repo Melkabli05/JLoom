@@ -1,0 +1,39 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.jpa
+    yaml: |
+      hibernate:
+        ddl-auto: validate
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring
+    yaml: |
+      mail:
+        host: "{{mail_host}}"
+        port: "{{mail_port}}"
+        username: "{{mail_username}}"
+        password: "{{mail_password}}"
+        properties:
+          mail:
+            smtp:
+              connectiontimeout: 5000
+              timeout: 5000
+              writetimeout: 5000
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring
+    yaml: |
+      threads:
+        virtual:
+          enabled: true
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      public-paths:
+        notification-service: "POST:/internal/notifications"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.internal
+    yaml: |
+      service-key: "{{internal_service_key}}"
+    filePattern: "**/application.yml"

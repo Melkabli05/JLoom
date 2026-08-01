@@ -1,0 +1,25 @@
+# Index of generic, reusable capability modules — building blocks any project can add regardless
+# of business domain. Business-domain service modules (notification-service, user-service,
+# identity-service, ...) have their own index at /services/modules.yml. See
+# com.jloom.registry.CatalogRoots.
+modules:
+  - base
+  - micronaut-base
+  - postgres
+  - mysql
+  - mariadb
+  - h2
+  - flyway
+  - flyway-mysql
+  - validation
+  - caching-caffeine
+  - caching-redis
+  - openapi
+  - aop
+  - scheduling
+  - async
+  - auditing
+  - problem-details
+  - jwt-auth
+  - otel-tracing
+  - testcontainers

@@ -1,0 +1,11 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $
+    yaml: |
+      spring:
+        datasource:
+          url: jdbc:postgresql://localhost:5432/{{db_name}}
+          username: app
+          password: app
+        jpa:
+          open-in-view: false
+    filePattern: "**/application.yml"

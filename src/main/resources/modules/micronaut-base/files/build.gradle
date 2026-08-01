@@ -1,0 +1,48 @@
+plugins {
+    id("java")
+    id("io.micronaut.application") version "4.4.5"
+}
+
+group = "{{package}}"
+version = "0.0.1-SNAPSHOT"
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    implementation("io.micronaut:micronaut-http-server-netty")
+    implementation("io.micronaut:micronaut-jackson-databind")
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("io.micronaut.validation:micronaut-validation")
+    // SnakeYAML is required at runtime because application.yml uses YAML syntax; Micronaut's
+    // inspectRuntimeClasspath Gradle task fails without it (it parses YAML at build time too).
+    runtimeOnly("org.yaml:snakeyaml")
+
+    testAnnotationProcessor("io.micronaut:micronaut-http-validation")
+    testImplementation("io.micronaut.test:micronaut-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
+}
+
+micronaut {
+    version = "4.6.3"
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("com.acme.*")
+    }
+}
+
+tasks.named("test") {
+    useJUnitPlatform()
+}

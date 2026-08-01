@@ -1,0 +1,5 @@
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springdoc
+    artifactId: springdoc-openapi-starter-webmvc-ui
+    version: 3.0.x
+    configuration: implementation

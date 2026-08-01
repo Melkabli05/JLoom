@@ -1,0 +1,17 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.jpa
+    yaml: |
+      hibernate:
+        ddl-auto: validate
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      public-paths:
+        user-service: "POST:/users,POST:/internal/users/verify-credentials"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.internal
+    yaml: |
+      service-key: "{{internal_service_key}}"
+    filePattern: "**/application.yml"

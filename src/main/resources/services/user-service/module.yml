@@ -1,0 +1,51 @@
+id: user-service
+version: 3.6.0
+requires: [capability:http-api, capability:relational-db, capability:auth, capability:validation]
+conflicts: []
+prompts:
+  - key: internal_service_key
+    type: secret
+    default: change-me-internal-service-key-dev-only
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/user/domain/model/User.java
+  - src/main/java/{{package_path}}/user/domain/model/Role.java
+  - src/main/java/{{package_path}}/user/presentation/mapper/UserMapper.java
+  - src/main/java/{{package_path}}/user/infrastructure/persistence/UserRepository.java
+  - src/main/java/{{package_path}}/user/infrastructure/configuration/UserConfig.java
+  - src/main/java/{{package_path}}/user/application/service/UserService.java
+  - src/main/java/{{package_path}}/user/application/service/UserServiceImpl.java
+  - src/main/java/{{package_path}}/user/presentation/dto/RegistrationRequest.java
+  - src/main/java/{{package_path}}/user/presentation/dto/ChangeEmailRequest.java
+  - src/main/java/{{package_path}}/user/presentation/dto/ChangePasswordRequest.java
+  - src/main/java/{{package_path}}/user/presentation/dto/DeleteUserRequest.java
+  - src/main/java/{{package_path}}/user/presentation/dto/VerifyCredentialsRequest.java
+  - src/main/java/{{package_path}}/user/presentation/dto/VerifyCredentialsResponse.java
+  - src/main/java/{{package_path}}/user/presentation/dto/UserResponse.java
+  - src/main/java/{{package_path}}/user/presentation/dto/UserView.java
+  - src/main/java/{{package_path}}/user/presentation/annotation/SelfOrAdmin.java
+  - src/main/java/{{package_path}}/user/presentation/controller/UserController.java
+  - src/main/java/{{package_path}}/user/presentation/controller/InternalUserController.java
+  - src/main/resources/db/migration/V2__create_users_table.sql
+  - src/main/resources/db/migration/V3__add_user_role.sql
+  - src/main/resources/db/migration/V4__add_user_enabled.sql
+  - src/test/java/{{package_path}}/user/application/service/UserServiceTest.java
+  - src/test/java/{{package_path}}/user/presentation/controller/UserControllerTest.java
+  - src/test/java/{{package_path}}/user/presentation/controller/UserAuthorizationTest.java
+  - src/test/java/{{package_path}}/user/presentation/controller/InternalUserControllerTest.java
+  - src/test/java/{{package_path}}/user/UserLayeringTest.java
+upgrades:
+  - from: 3.1.0
+    to: 3.2.0
+    recipe: recipes/v3.1.0-to-v3.2.0.yml
+  - from: 3.2.0
+    to: 3.3.0
+    recipe: recipes/v3.2.0-to-v3.3.0.yml
+  - from: 3.3.0
+    to: 3.4.0
+    recipe: recipes/v3.3.0-to-v3.4.0.yml
+  - from: 3.4.0
+    to: 3.5.0
+    recipe: recipes/v3.4.0-to-v3.5.0.yml

@@ -1,0 +1,16 @@
+# JWT-specific config lands at the root `jwt:` key (1-level path; works on fresh + existing
+# projects). `jwt.secret` is the live HMAC key SecurityConfig's JwtDecoder actually validates
+# against (and, when identity-service is also present, what it signs with — see that module's
+# own IdentityConfig). No `jwt.public-paths` key is written here on purpose — this module
+# doesn't know which endpoints any given service wants exposed without a token, and MergeYaml's
+# scalar-overwrite behavior when the same key is set by two modules in one batch isn't something
+# to depend on. SecurityConfig.java falls back to "" via @Value("${jwt.public-paths:}") if no
+# other module sets it. A module that needs a public endpoint adds this key via its own
+# application-yml merge (e.g. user-service adds "POST:/users" for registration).
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      secret: "{{jwt_secret}}"
+      issuer: jloom-app
+      expiration-seconds: 3600
+    filePattern: "**/application.yml"

@@ -1,0 +1,31 @@
+# flyway — Postgres-flavored Flyway: adds spring-boot-starter-flyway + flyway-core +
+# flyway-database-postgresql (Flyway 10+ moved per-database dialect support out of flyway-core
+# into separate artifacts) + config, and drops a starter migration file. Requires
+# `capability:relational-db`, so ModuleRegistry.validate() enforces that a provider is listed
+# before this module in the same `add` batch — but that capability tag doesn't distinguish WHICH
+# database, so this module specifically assumes postgres. Pick `flyway-mysql` instead if you added
+# mysql/mariadb. If you added h2, no separate Flyway module is needed at all — flyway-core alone
+# already supports H2, so wire the plain `flyway-core` dependency + migration file yourself (the
+# postgres-specific dialect artifact this module adds would be an unused, unnecessary dependency
+# for an H2 project).
+#
+# spring-boot-starter-flyway is load-bearing, not decorative: Spring Boot 4's modularized
+# autoconfiguration moved FlywayAutoConfiguration out of the monolithic spring-boot-autoconfigure
+# jar into its own module, which this starter is what actually pulls in — flyway-core +
+# flyway-database-postgresql alone compile fine but Flyway silently never runs (no error, no log
+# line, migrations just don't happen), which surfaced as every persistence-using service failing
+# at the first query that touched an unmigrated table.
+id: flyway
+version: 1.1.0
+requires: [capability:relational-db]
+conflicts: []
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/resources/db/migration/V1__init.sql
+upgrades:
+  - from: 1.0.0
+    to: 1.1.0
+    recipe: recipes/v1.0.0-to-v1.1.0.yml

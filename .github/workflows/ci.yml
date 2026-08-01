@@ -1,0 +1,54 @@
+# GitHub Actions CI for jloom — runs the design §8 testing tiers on every push and PR:
+#   - tier 1: GoldenFileTest (module-level snapshot)
+#   - tier 2: CombinationMatrixTest (declared-supported archetypes)
+#   - tier 3: GeneratedAppSmokeTest (Testcontainers-backed integration test for the
+#              postgres archetype's recipe against a real Postgres server)
+# Plus the existing unit tests for the registry / state / orchestration layers.
+#
+# JDK 25 + Testcontainers needs a Docker daemon — runners come with one preinstalled.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Build + Test on JDK 25
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build + test (all tiers)
+        run: ./gradlew clean test --no-daemon
+
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+
+      - name: Verify installDist artifact
+        run: ./gradlew installDist --no-daemon && build/install/jloom/bin/jloom --version

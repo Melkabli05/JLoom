@@ -1,0 +1,43 @@
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.projectlombok
+    artifactId: lombok
+    configuration: compileOnly
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.projectlombok
+    artifactId: lombok
+    configuration: annotationProcessor
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.mapstruct
+    artifactId: mapstruct
+    version: 1.6.3
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.mapstruct
+    artifactId: mapstruct-processor
+    version: 1.6.3
+    configuration: annotationProcessor
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.projectlombok
+    artifactId: lombok-mapstruct-binding
+    version: 0.2.0
+    configuration: annotationProcessor
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.hibernate.orm
+    artifactId: hibernate-jpamodelgen
+    version: 7.4.1.Final
+    configuration: annotationProcessor
+- org.openrewrite.gradle.AddDependency:
+    groupId: io.minio
+    artifactId: minio
+    version: 8.6.0
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: net.coobird
+    artifactId: thumbnailator
+    version: 0.4.20
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: com.twelvemonkeys.imageio
+    artifactId: imageio-webp
+    version: 3.12.0
+    configuration: runtimeOnly

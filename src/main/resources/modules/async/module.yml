@@ -1,0 +1,14 @@
+# async — @EnableAsync. No new dependency: the annotation lives in spring-context, already
+# present transitively via spring-boot-starter-webmvc. Spring Boot autoconfigures a
+# ThreadPoolTaskExecutor with sensible defaults once async is enabled — no custom executor bean
+# needed unless pool sizing becomes a real requirement later.
+id: async
+version: 1.0.0
+requires: []
+conflicts: []
+provides: capability:async
+prompts: []
+mergeRecipes: []
+fileTemplates:
+  - src/main/java/{{package_path}}/config/AsyncConfig.java
+upgrades: []

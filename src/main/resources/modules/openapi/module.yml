@@ -1,0 +1,15 @@
+# openapi — springdoc-openapi (Spring Framework 7 / Boot 4-compatible as of 3.0.x; verified
+# against the project's actual GitHub releases, not assumed). Auto-generates the OpenAPI 3.1
+# document from the app's own controllers and serves Swagger UI — no annotations required to get
+# a working spec; add @Operation/@Schema incrementally for richer docs. Not Boot BOM-managed, so
+# the version is pinned explicitly here (third-party dependency, per design decision).
+id: openapi
+version: 1.0.0
+requires: []
+conflicts: []
+provides: capability:api-docs
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+fileTemplates: []
+upgrades: []

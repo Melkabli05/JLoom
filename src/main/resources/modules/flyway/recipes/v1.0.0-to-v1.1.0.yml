@@ -1,0 +1,9 @@
+# flyway 1.0.0 -> 1.1.0: fixes a real production-breaking bug. Spring Boot 4's modularized
+# autoconfiguration moved FlywayAutoConfiguration out of the monolithic spring-boot-autoconfigure
+# jar into its own module; flyway-core + flyway-database-postgresql alone no longer get
+# auto-configured, so Flyway silently never ran (no error, no log line — migrations just never
+# applied). spring-boot-starter-flyway is what actually wires it back up.
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-flyway
+    configuration: implementation

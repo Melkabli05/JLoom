@@ -1,0 +1,19 @@
+# notification-micronaut — Micronaut variant of the notification service.
+# Parallel to modules/notification-service (Spring Boot). Same REST contract, framework-idiomatic
+# implementation (Micronaut @Controller instead of Spring @RestController, @Get/@Post instead of
+# @GetMapping/@PostMapping, @Body instead of @RequestBody, etc.).
+#
+# Phase 3.4 v0.1 — REST contract parity proven via FrameworkParityTest. Full Kafka/DLQ parity
+# lands in Phase 3.5+ when the Spring Boot Kafka adapter ships.
+id: notification-micronaut
+version: 1.0.0
+requires: [micronaut-base]
+conflicts: []
+prompts: []
+mergeRecipes:
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/notification/NotificationController.java
+  - src/main/java/{{package_path}}/notification/NotificationService.java
+  - src/main/java/{{package_path}}/notification/NotificationRecord.java
+  - src/test/java/{{package_path}}/notification/NotificationServiceTest.java

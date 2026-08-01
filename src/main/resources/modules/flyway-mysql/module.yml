@@ -1,0 +1,15 @@
+# flyway-mysql — MySQL/MariaDB-flavored Flyway: adds flyway-core + flyway-mysql (covers both
+# MySQL and MariaDB dialects — Flyway ships one combined artifact for both) + config, and drops a
+# starter migration file. Sibling of `flyway` (which is postgres-specific) — pick whichever
+# matches the relational-db module you added.
+id: flyway-mysql
+version: 1.0.0
+requires: [capability:relational-db]
+conflicts: []
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/resources/db/migration/V1__init.sql
+upgrades: []

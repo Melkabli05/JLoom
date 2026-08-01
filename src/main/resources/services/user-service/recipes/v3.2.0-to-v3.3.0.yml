@@ -1,0 +1,16 @@
+- org.openrewrite.text.CreateTextFile:
+    relativeFileName: src/main/resources/db/migration/V3__add_user_role.sql
+    fileContents: |
+      alter table users add column role varchar(20) not null default 'USER';
+    overwriteExisting: false
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      public-paths:
+        user-service: "POST:/users,POST:/internal/users/verify-credentials"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.internal
+    yaml: |
+      service-key: "change-me-internal-service-key-dev-only"
+    filePattern: "**/application.yml"

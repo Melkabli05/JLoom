@@ -1,0 +1,12 @@
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.testcontainers
+    artifactId: testcontainers
+    configuration: testImplementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.testcontainers
+    artifactId: testcontainers-postgresql
+    configuration: testImplementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.testcontainers
+    artifactId: testcontainers-junit-jupiter
+    configuration: testImplementation
