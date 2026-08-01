@@ -31,10 +31,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()    { printf "${BLUE}==>${NC} %s\n" "$*"; }
-success() { printf "${GREEN}==✓${NC} %s\n" "$*"; }
-warn()    { printf "${YELLOW}==!${NC} %s\n" "$*"; }
-fail()    { printf "${RED}==✗${NC} %s\n" "$*" >&2; exit 1; }
+info()    { printf "%b\n" "${BLUE}==>${NC} $*"; }
+success() { printf "%b\n" "${GREEN}==✓${NC} $*"; }
+warn()    { printf "%b\n" "${YELLOW}==!${NC} $*"; }
+fail()    { printf "%b\n" "${RED}==✗${NC} $*" >&2; exit 1; }
 
 usage() {
     cat <<EOF
