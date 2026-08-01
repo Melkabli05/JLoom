@@ -1,26 +1,14 @@
 package com.jloom.cli;
 
-import com.jloom.exec.GradleRewriteRunner;
-import com.jloom.orchestrate.ModuleApplier;
-import com.jloom.orchestrate.UpgradeEngine;
-import com.jloom.registry.ArchetypeRegistry;
-import com.jloom.registry.ModuleRegistry;
-import com.jloom.registry.ServiceRegistry;
-import com.jloom.scaffold.FileTreeCopier;
 import com.jloom.state.AppliedModule;
 import com.jloom.state.ProjectStateStore;
-import com.jloom.compose.RecipeComposer;
-import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
-import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,36 +18,28 @@ class JloomCommandsTest {
     @TempDir
     Path tempDir;
 
-    private CommandLine buildCommandLine() {
-        JloomContext ctx = new JloomContext(new org.springframework.context.support.StaticApplicationContext() {
-            @Override public <T> T getBean(Class<T> requiredType) {
-                throw new UnsupportedOperationException("not used in this test");
-            }
-        });
-        // Wire the real Spring beans that NewCommands/UpgradeCommands need
-        ModuleApplier applier = new ModuleApplier(
-                ModuleRegistry.loadBundled(),
-                new RecipeComposer(),
-                new GradleRewriteRunner(),
-                new ProjectStateStore(),
-                new FileTreeCopier());
-        UpgradeEngine upgradeEngine = new UpgradeEngine(ModuleRegistry.loadBundled());
-        ModuleRegistry modules = ModuleRegistry.loadBundled();
-        ServiceRegistry services = ServiceRegistry.loadBundled();
-        ArchetypeRegistry archetypes = ArchetypeRegistry.loadBundled();
-        ProjectStateStore stateStore = new ProjectStateStore();
-
-        JloomCommand root = new JloomCommand(new TestContext(applier, upgradeEngine, modules, services, archetypes, stateStore));
+    private CommandLine buildCommandLine(JloomContext context) {
+        JloomCommand root = new JloomCommand(context);
         return new CommandLine(root)
-                .setOut(new PrintWriter(new ByteArrayOutputStream(), true))
-                .setErr(new PrintWriter(new ByteArrayOutputStream(), true))
-                .setExecutionExceptionHandler(new JloomExceptionHandler())
-                .setParameterExceptionHandler(new JloomExceptionHandler());
+                .setExecutionExceptionHandler(new JloomExceptionHandler()::handleExecutionException)
+                .setParameterExceptionHandler(new JloomExceptionHandler()::handleParseException);
+    }
+
+    private JloomContext context() {
+        return new JloomContext(newDumbTerminal());
+    }
+
+    private static org.jline.terminal.Terminal newDumbTerminal() {
+        try {
+            return new DumbTerminal(new java.io.ByteArrayInputStream(new byte[0]), new java.io.ByteArrayOutputStream());
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
     void registersEveryDeclaredCommand() {
-        CommandLine cmd = buildCommandLine();
+        CommandLine cmd = buildCommandLine(context());
         Set<String> names = cmd.getSubcommands().keySet();
         assertThat(names).contains("new", "add", "list", "info", "status", "upgrade", "config", "help");
     }
@@ -266,16 +246,7 @@ class JloomCommandsTest {
         System.setOut(new java.io.PrintStream(out, true));
         System.setErr(new java.io.PrintStream(err, true));
         try {
-            CommandLine cmd = new CommandLine(new JloomCommand(new TestContext(
-                    new ModuleApplier(ModuleRegistry.loadBundled(), new RecipeComposer(),
-                            new GradleRewriteRunner(), new ProjectStateStore(), new FileTreeCopier()),
-                    new UpgradeEngine(ModuleRegistry.loadBundled()),
-                    ModuleRegistry.loadBundled(),
-                    ServiceRegistry.loadBundled(),
-                    ArchetypeRegistry.loadBundled(),
-                    new ProjectStateStore())))
-                    .setExecutionExceptionHandler(new JloomExceptionHandler())
-                    .setParameterExceptionHandler(new JloomExceptionHandler());
+            CommandLine cmd = buildCommandLine(context());
             int exit = cmd.execute(args);
             return new Result(exit, out.toString(), err.toString());
         } finally {
@@ -285,33 +256,5 @@ class JloomCommandsTest {
     }
 
     private record Result(int exitCode, String out, String err) {
-    }
-
-    static class TestContext extends JloomContext {
-        TestContext(ModuleApplier applier, UpgradeEngine engine, ModuleRegistry modules,
-                   ServiceRegistry services, ArchetypeRegistry archetypes, ProjectStateStore store) {
-            super(new org.springframework.context.support.StaticApplicationContext() {
-                @SuppressWarnings("unchecked")
-                @Override public <T> T getBean(Class<T> requiredType) {
-                    if (requiredType == ModuleApplier.class) return (T) applier;
-                    if (requiredType == UpgradeEngine.class) return (T) engine;
-                    if (requiredType == ModuleRegistry.class) return (T) modules;
-                    if (requiredType == ServiceRegistry.class) return (T) services;
-                    if (requiredType == ArchetypeRegistry.class) return (T) archetypes;
-                    if (requiredType == ProjectStateStore.class) return (T) store;
-                    if (requiredType == Terminal.class) return (T) newDumbTerminal();
-                    if (requiredType == JloomContext.class) return (T) this; // recursive; ignored
-                    throw new UnsupportedOperationException("not stubbed: " + requiredType.getName());
-                }
-            });
-        }
-    }
-
-    private static Terminal newDumbTerminal() {
-        try {
-            return new DumbTerminal(new java.io.ByteArrayInputStream(new byte[0]), new java.io.ByteArrayOutputStream());
-        } catch (java.io.IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
