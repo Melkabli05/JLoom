@@ -16,9 +16,9 @@ public class ConfigCmd extends CliCommand implements Runnable {
         String type = terminal.getType();
         boolean color = !"dumb".equals(type) && !"dumb-color".equals(type);
         System.out.println("""
-                jloom config:
+                %s
                   color:       %s (terminal-type=%s)
                   state dir:   <project>/.jloom (per-project; not configurable)
-                """.formatted(color ? "ON" : "OFF", type));
+                """.formatted(JloomOutput.heading("jloom config:"), color ? "ON" : "OFF", type));
     }
 }

@@ -28,7 +28,7 @@ public class UpgradeCmd extends CliCommand implements Runnable {
         UpgradeEngine upgradeEngine = parent.context().upgradeEngine();
         UpgradeResult result = upgradeEngine.upgrade(Path.of(project), module, dryRun);
         switch (result) {
-            case UpgradeResult.UpToDate ignored -> System.out.println("Already up to date.");
+            case UpgradeResult.UpToDate ignored -> System.out.println(JloomOutput.hint("Already up to date."));
             case UpgradeResult.Upgraded upgraded -> {
                 System.out.println(JloomOutput.success("Upgraded:"));
                 for (String change : upgraded.changes()) {
@@ -36,7 +36,7 @@ public class UpgradeCmd extends CliCommand implements Runnable {
                 }
             }
             case UpgradeResult.DryRun dryRunResult -> {
-                System.out.println("Dry run — would upgrade:");
+                System.out.println(JloomOutput.heading("Dry run — would upgrade:"));
                 for (String change : dryRunResult.changes()) {
                     System.out.println("  " + change);
                 }

@@ -37,7 +37,7 @@ public class AddCmd extends CliCommand implements Runnable {
         ApplyResult result = applier.apply(Path.of(project), ids, set == null ? Map.of() : set, dryRun, null, null);
         switch (result) {
             case ApplyResult.Applied ignored -> System.out.println(JloomOutput.success("Applied: " + ids));
-            case ApplyResult.DryRun ignored -> System.out.println("Dry run — no changes written.");
+            case ApplyResult.DryRun ignored -> System.out.println(JloomOutput.hint("Dry run — no changes written."));
             case ApplyResult.Rejected rejected -> throw new IllegalArgumentException(formatProblems(rejected.problems()));
             case ApplyResult.Failed f -> throw new IllegalStateException("OpenRewrite run failed:\n" + f.output());
         }

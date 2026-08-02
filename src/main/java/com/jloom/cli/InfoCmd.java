@@ -26,17 +26,17 @@ public class InfoCmd extends CliCommand implements Runnable {
                         "No such module: '" + id + "'. Run 'jloom list' to see available modules."));
 
         StringBuilder out = new StringBuilder();
-        out.append(mod.id()).append(' ').append(mod.version()).append('\n');
+        out.append(JloomOutput.accent(mod.id())).append(' ').append(mod.version()).append('\n');
 
         if (!mod.requires().isEmpty()) {
             out.append("  requires: ").append(mod.requires()).append('\n');
         }
         if (!mod.fileTemplates().isEmpty()) {
-            out.append("  adds new files:\n");
+            out.append(JloomOutput.heading("  adds new files:")).append('\n');
             mod.fileTemplates().forEach(t -> out.append("    + ").append(t).append('\n'));
         }
         if (!mod.mergeRecipes().isEmpty()) {
-            out.append("  edits existing files via OpenRewrite recipes:\n");
+            out.append(JloomOutput.heading("  edits existing files via OpenRewrite recipes:")).append('\n');
             mod.mergeRecipes().forEach(t -> out.append("    ~ ").append(t).append('\n'));
         }
         System.out.print(out);

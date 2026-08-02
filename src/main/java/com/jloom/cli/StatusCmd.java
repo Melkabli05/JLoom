@@ -29,14 +29,16 @@ public class StatusCmd extends CliCommand implements Runnable {
             return;
         }
         ModuleRegistry modules = ctx.modules();
-        StringBuilder out = new StringBuilder("Applied modules in ")
-                .append(projectPath.toAbsolutePath()).append(":\n");
+        StringBuilder out = new StringBuilder(JloomOutput.heading("Applied modules in " + projectPath.toAbsolutePath() + ":"))
+                .append('\n');
         for (AppliedModule applied : state.modules()) {
             var latest = modules.find(applied.id());
             String note = (latest.isPresent() && !latest.get().version().equals(applied.version()))
                     ? "catalog has " + latest.get().version() + " — run 'jloom upgrade' to pick it up"
-                    : "up to date";
-            out.append(String.format("  %-25s %-10s %s%n", applied.id(), applied.version(), note));
+                    : JloomOutput.hint("up to date");
+            String paddedId = JloomOutput.accent(String.format("%-25s", applied.id()));
+            out.append("  ").append(paddedId).append(' ')
+                    .append(String.format("%-10s", applied.version())).append(' ').append(note).append('\n');
         }
         System.out.print(out);
     }

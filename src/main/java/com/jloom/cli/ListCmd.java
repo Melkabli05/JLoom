@@ -45,7 +45,7 @@ public class ListCmd extends CliCommand implements Runnable {
         String body = sorted.stream()
                 .map(m -> formatModuleLine(m, idWidth, versionWidth))
                 .collect(Collectors.joining("\n"));
-        System.out.println("Available modules:\n" + body);
+        System.out.println(JloomOutput.heading("Available modules:") + "\n" + body);
     }
 
     private void listServices(ServiceRegistry services) {
@@ -57,7 +57,7 @@ public class ListCmd extends CliCommand implements Runnable {
         String body = sorted.stream()
                 .map(s -> formatServiceLine(s, idWidth, nameWidth))
                 .collect(Collectors.joining("\n"));
-        System.out.println("Available services:\n" + body);
+        System.out.println(JloomOutput.heading("Available services:") + "\n" + body);
     }
 
     private void listArchetypes(ArchetypeRegistry archetypes) {
@@ -68,7 +68,7 @@ public class ListCmd extends CliCommand implements Runnable {
         String body = sorted.stream()
                 .map(a -> formatArchetypeLine(a, idWidth))
                 .collect(Collectors.joining("\n"));
-        System.out.println("Available archetypes:\n" + body);
+        System.out.println(JloomOutput.heading("Available archetypes:") + "\n" + body);
     }
 
     private static <T> int widthOf(List<T> items, java.util.function.Function<T, String> field) {
@@ -78,15 +78,20 @@ public class ListCmd extends CliCommand implements Runnable {
     private static String formatModuleLine(ModuleManifest m, int idWidth, int versionWidth) {
         String provides = m.provides() == null ? "" : "  provides=" + m.provides();
         String requires = m.requires().isEmpty() ? "" : "  requires=" + m.requires();
-        return String.format("  %-" + idWidth + "s  %-" + versionWidth + "s%s%s", m.id(), m.version(), provides, requires);
+        // Pad the plain id to width first, then colorize — colorizing before padding would
+        // count the invisible ANSI escape bytes toward the column width and break alignment.
+        String paddedId = JloomOutput.accent(String.format("%-" + idWidth + "s", m.id()));
+        return "  " + paddedId + "  " + String.format("%-" + versionWidth + "s", m.version()) + provides + requires;
     }
 
     private static String formatServiceLine(ServiceManifest s, int idWidth, int nameWidth) {
-        return String.format("  %-" + idWidth + "s  %-" + nameWidth + "s  frameworks=%s", s.id(), s.displayName(), s.framework());
+        String paddedId = JloomOutput.accent(String.format("%-" + idWidth + "s", s.id()));
+        return "  " + paddedId + "  " + String.format("%-" + nameWidth + "s", s.displayName()) + "  frameworks=" + s.framework();
     }
 
     private static String formatArchetypeLine(ArchetypeManifest a, int idWidth) {
-        return String.format("  %-" + idWidth + "s  modules=%s", a.id(), a.modules());
+        String paddedId = JloomOutput.accent(String.format("%-" + idWidth + "s", a.id()));
+        return "  " + paddedId + "  modules=" + a.modules();
     }
 
     static class WhatCandidates implements Iterable<String> {

@@ -34,8 +34,8 @@ public class JloomPrompts {
         if (!isInteractive()) {
             throw new IllegalArgumentException("--" + promptLabel + " is required (no interactive terminal to prompt on)");
         }
-        System.out.println(prompt);
-        String line = readLine(promptLabel + " [" + defaultValue + "]: ");
+        System.out.println(JloomOutput.question(prompt));
+        String line = readLine(promptLabel + " " + JloomOutput.hint("[" + defaultValue + "]") + ": ");
         return line.isBlank() ? defaultValue : line.trim();
     }
 
@@ -46,7 +46,7 @@ public class JloomPrompts {
         if (!isInteractive()) {
             throw new IllegalArgumentException("--" + promptLabel + " is required (no interactive terminal to prompt on)");
         }
-        System.out.println(prompt);
+        System.out.println(JloomOutput.question(prompt));
         while (true) {
             String line;
             try {
@@ -67,8 +67,8 @@ public class JloomPrompts {
         if (!isInteractive()) {
             return defaultValue;
         }
-        System.out.println(prompt);
-        String line = readLine(promptLabel + " [" + defaultValue + "]: ");
+        System.out.println(JloomOutput.question(prompt));
+        String line = readLine(promptLabel + " " + JloomOutput.hint("[" + defaultValue + "]") + ": ");
         return line.isBlank() ? defaultValue : line.trim();
     }
 
@@ -81,11 +81,11 @@ public class JloomPrompts {
             return null;
         }
         List<String> labels = choices.keySet().stream().toList();
-        System.out.println(prompt);
+        System.out.println(JloomOutput.question(prompt));
         for (int i = 0; i < labels.size(); i++) {
-            System.out.println("  " + (i + 1) + ") " + labels.get(i));
+            System.out.println("  " + JloomOutput.accent((i + 1) + ")") + " " + labels.get(i));
         }
-        System.out.println("  0) " + noneLabel);
+        System.out.println("  " + JloomOutput.accent("0)") + " " + noneLabel);
         String line = readLine("Choose [0-" + labels.size() + "]: ");
         if (line.isBlank() || "0".equals(line.trim())) {
             return null;
@@ -110,10 +110,10 @@ public class JloomPrompts {
         }
         List<String> labels = choices.keySet().stream().toList();
         String defaultId = choices.get(defaultLabel);
-        System.out.println(prompt);
+        System.out.println(JloomOutput.question(prompt));
         for (int i = 0; i < labels.size(); i++) {
-            String marker = labels.get(i).equals(defaultLabel) ? " (default)" : "";
-            System.out.println("  " + (i + 1) + ") " + labels.get(i) + marker);
+            String marker = labels.get(i).equals(defaultLabel) ? " " + JloomOutput.hint("(default)") : "";
+            System.out.println("  " + JloomOutput.accent((i + 1) + ")") + " " + labels.get(i) + marker);
         }
         String line = readLine("Choose [1-" + labels.size() + "]: ");
         if (line.isBlank()) {
@@ -134,10 +134,10 @@ public class JloomPrompts {
             return List.of();
         }
         List<String> labels = choices.keySet().stream().toList();
-        System.out.println(prompt + " (space to toggle, enter to confirm)");
+        System.out.println(JloomOutput.question(prompt) + " " + JloomOutput.hint("(space to toggle, enter to confirm)"));
         boolean[] selected = new boolean[labels.size()];
         for (int i = 0; i < labels.size(); i++) {
-            System.out.printf("  [%s] %d) %s%n", selected[i] ? "x" : " ", (i + 1), labels.get(i));
+            System.out.println("  [" + (selected[i] ? "x" : " ") + "] " + JloomOutput.accent((i + 1) + ")") + " " + labels.get(i));
         }
         String line = readLine("Toggle which? (e.g. '1 3' to toggle 1 and 3, blank to confirm): ");
         if (line.isBlank()) {

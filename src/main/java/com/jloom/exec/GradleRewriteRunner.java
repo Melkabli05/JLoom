@@ -12,6 +12,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import picocli.CommandLine.Help.Ansi;
+
 public final class GradleRewriteRunner {
 
     interface ProcessWaiter {
@@ -57,7 +59,7 @@ public final class GradleRewriteRunner {
     }
 
     private static final OutputSink STDERR_SINK = elapsedSeconds -> {
-        System.err.printf("\r[ . ] Running OpenRewrite recipes… %ds   ", elapsedSeconds);
+        System.err.print(Ansi.AUTO.string("\r@|faint [ . ] Running OpenRewrite recipes… " + elapsedSeconds + "s   |@"));
         System.err.flush();
     };
 

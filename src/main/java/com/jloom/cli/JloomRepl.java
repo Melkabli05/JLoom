@@ -65,12 +65,13 @@ public final class JloomRepl {
                         Path.of(System.getProperty("user.home"), ".jloom", "history"))
                 .build();
         CommandLine cmd = JloomCommandLine.create(new JloomCommand(context));
+        String replPrompt = JloomOutput.question("jloom") + "> ";
         try {
             printMenu();
             while (true) {
                 String line;
                 try {
-                    line = reader.readLine("jloom> ");
+                    line = reader.readLine(replPrompt);
                 } catch (org.jline.reader.EndOfFileException e) {
                     break;
                 } catch (org.jline.reader.UserInterruptException e) {
@@ -116,13 +117,13 @@ public final class JloomRepl {
     }
 
     private static void printMenu() {
-        System.out.println("What would you like to do?");
+        System.out.println(JloomOutput.question("What would you like to do?"));
         for (int i = 0; i < MENU.size(); i++) {
-            System.out.println("  " + (i + 1) + ") " + MENU.get(i).description());
+            System.out.println("  " + JloomOutput.accent((i + 1) + ")") + " " + MENU.get(i).description());
         }
-        System.out.println("  0) Quit");
+        System.out.println("  " + JloomOutput.accent("0)") + " Quit");
         System.out.println();
-        System.out.println("Pick a number, or type a full command (tab-completes; 'menu' shows this again).");
+        System.out.println(JloomOutput.hint("Pick a number, or type a full command (tab-completes; 'menu' shows this again)."));
         System.out.println();
     }
 }

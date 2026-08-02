@@ -69,7 +69,7 @@ public class NewCmd extends CliCommand implements Runnable {
         JloomPrompts prompts = ctx.prompts();
 
         if (!quiet && !hasText(name) && prompts.isInteractive()) {
-            System.out.println("Let's set up your project — press Enter on any question to accept the default.\n");
+            System.out.println(JloomOutput.hint("Let's set up your project — press Enter on any question to accept the default.") + "\n");
         }
         Path target = resolveTarget(name, prompts, ctx.services(), ctx.archetypes());
 
@@ -97,7 +97,7 @@ public class NewCmd extends CliCommand implements Runnable {
         }
 
         if (!quiet) {
-            System.out.println((dryRun ? "Previewing " : "Setting up ") + target + "...");
+            System.out.println((dryRun ? "Previewing " : "Setting up ") + JloomOutput.accent(target.toString()) + "...");
         }
         ApplyResult result = ctx.applier().apply(target, moduleIds, archetypeAnswers, dryRun,
                 resolvedBasePackage, target.getFileName().toString());
@@ -109,8 +109,8 @@ public class NewCmd extends CliCommand implements Runnable {
                       cd %s
                       ./gradlew test
                     """.formatted(JloomOutput.success("Created " + target),
-                            JloomOutput.heading("Next steps:"), target));
-            case ApplyResult.DryRun ignored -> System.out.println("Dry run — would create " + target + " with modules " + moduleIds);
+                            JloomOutput.heading("Next steps:"), JloomOutput.accent(target.toString())));
+            case ApplyResult.DryRun ignored -> System.out.println(JloomOutput.hint("Dry run — would create " + target + " with modules " + moduleIds));
             case ApplyResult.Rejected rejected -> throw new IllegalArgumentException(formatProblems(rejected.problems()));
             case ApplyResult.Failed f -> throw new IllegalStateException(f.output());
         }
@@ -251,7 +251,7 @@ public class NewCmd extends CliCommand implements Runnable {
         if (databaseModule != null) {
             choices.put("Testing infrastructure", "testing");
         }
-        return prompts.chooseMultiple("capabilities", "Capabilities (space to toggle, enter to confirm)", choices);
+        return prompts.chooseMultiple("capabilities", "Capabilities", choices);
     }
 
     private String resolveCacheProvider(String cacheProvider, JloomPrompts prompts) {
