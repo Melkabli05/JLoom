@@ -2,26 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CommanderError } from "commander";
 import { buildProgram } from "../src/program.ts";
-import { createReplIo } from "../src/lineSource.ts";
-import type { Interface } from "node:readline/promises";
-
-// A real Readline Interface stub. Every test passes a fully-specified argv so no prompt
-// reads ever need to return anything - the line queue is effectively never consumed.
-const rlStub: Interface = Object.assign(Object.create(null), {
-  on: () => rlStub,
-  setPrompt: () => undefined,
-  prompt: () => undefined,
-  write: () => undefined,
-  close: () => undefined,
-  question: async () => "",
-  pause: () => undefined,
-  resume: () => undefined,
-  terminal: false,
-}) as unknown as Interface;
-const io = createReplIo(rlStub);
 
 async function captureError(argv: string[]): Promise<CommanderError> {
-  const program = buildProgram(io);
+  const program = buildProgram();
   const origLog = console.log;
   const origErr = console.error;
   console.log = () => undefined;
@@ -39,7 +22,7 @@ async function captureError(argv: string[]): Promise<CommanderError> {
 }
 
 test("all 7 commands register on the program", () => {
-  const program = buildProgram(io);
+  const program = buildProgram();
   const names = program.commands.map((c) => c.name());
   assert.deepStrictEqual(
     names.sort(),
@@ -79,8 +62,8 @@ test("invalid --database choice exits with code 'commander.invalidArgument' and 
   assert.ok(err.message.includes("Allowed choices are"));
 });
 
-test("REPL-style invocation: `from: 'user'` argv with the program-name prefix omitted parses correctly", async () => {
-  const program = buildProgram(io);
+test("`from: 'user'` argv with the program-name prefix omitted parses correctly", async () => {
+  const program = buildProgram();
   await assert.doesNotReject(async () => {
     await program.parseAsync(["list"], { from: "user" });
   });

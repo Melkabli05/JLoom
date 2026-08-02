@@ -1,10 +1,10 @@
 import path from "node:path";
 import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import type { ReplIo } from "./lineSource.ts";
+import * as clack from "@clack/prompts";
 import { catalog, validate, findUpgradePath, readBytes, readText, resolvePath, type ModuleManifest, type Upgrade } from "./catalog.ts";
 import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "./initializr.ts";
 import { applyOperations, compose, composeUpgrade, substitute, type ModuleSelection, type UpgradeStep } from "./merge.ts";
-import { askChoice, askConfirm, askMultiple, askNonBlankText, askOptional, askText, isInteractive, output, sectionHeader } from "./wizard.ts";
+import { askChoice, askConfirm, askMultiple, askNonBlankText, askOptional, askText, isInteractive, output } from "./wizard.ts";
 import {
   appliedIds,
   loadState,
@@ -419,8 +419,8 @@ export function runStatus(project: string): void {
   console.log(lines.join("\n"));
 }
 
-export async function runInfo(io: ReplIo, moduleId: string | undefined): Promise<void> {
-  const id = await askNonBlankText(io, moduleId, "module", "Which module? (see 'jloom list' for ids)");
+export async function runInfo(moduleId: string | undefined): Promise<void> {
+  const id = await askNonBlankText(moduleId, "module", "Which module? (see 'jloom list' for ids)");
   const mod = catalog.modules.get(id);
   if (mod === undefined) {
     throw new Error(`No such module: '${id}'. Run 'jloom list' to see available modules.`);
@@ -458,11 +458,10 @@ export interface AddOpts {
   yes?: boolean;
 }
 
-export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
+export async function runAdd(opts: AddOpts): Promise<void> {
   let ids = opts.moduleIds;
   if (ids.length === 0) {
     const typed = await askNonBlankText(
-      io,
       undefined,
       "modules",
       "Which modules? (comma or space separated ids, see 'jloom list')",
@@ -474,23 +473,18 @@ export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
   }
 
   const targetProject = path.resolve(opts.project);
+  const showChrome = isInteractive() && !opts.dryRun && !opts.yes;
 
-  if (isInteractive() && !opts.dryRun && !opts.yes) {
-    console.log(
-      [
-        "",
-        output.question("Summary:"),
-        `  Project: ${output.accent(targetProject)}`,
-        `  Adding:  ${output.accent(ids.join(", "))}`,
-        "",
-      ].join("\n"),
-    );
-    if (!(await askConfirm(io, "Proceed?", true))) {
-      console.log(output.hint("Aborted — no changes were made."));
+  if (showChrome) {
+    clack.note(`Project: ${targetProject}\nAdding:  ${ids.join(", ")}`, "Summary");
+    if (!(await askConfirm("Proceed?", true))) {
+      clack.outro("Aborted — no changes were made.");
       return;
     }
   }
 
+  const spin = isInteractive() ? clack.spinner() : undefined;
+  spin?.start("Applying modules...");
   const result = await apply({
     targetProject,
     moduleIds: ids,
@@ -499,6 +493,7 @@ export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
     basePackage: undefined,
     projectName: undefined,
   });
+  spin?.stop(result.kind === "applied" ? "Applied." : "Done.");
 
   switch (result.kind) {
     case "applied":
@@ -553,27 +548,23 @@ function validateBasePackage(value: string): string | undefined {
     : `must be a valid dotted Java package name, e.g. com.acme.myapp (got '${value}')`;
 }
 
-export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
-  if (!options.quiet && !hasText(options.name) && isInteractive()) {
-    console.log(`${output.hint("Let's set up your project — press Enter on any question to accept the default.")}\n`);
+export async function runNew(options: NewOptions): Promise<void> {
+  const interactiveWizard = isInteractive() && !options.quiet;
+  if (interactiveWizard && !hasText(options.name)) {
+    clack.intro("jloom — create a new project");
   }
 
-  if (!hasText(options.name) && isInteractive()) sectionHeader("Project");
-  const target = await resolveTarget(io, options.name);
+  const target = await resolveTarget(options.name);
 
-  if (!hasText(options.service) && isInteractive()) sectionHeader("Type");
-  const serviceChoices = new Map([...catalog.services.values()].map((s) => [`${s.id} — ${s.displayName}`, s.id]));
-  const serviceId = await askOptional(
-    io,
-    options.service,
-    "What would you like to create?",
-    serviceChoices,
-    "Just a base project",
-  );
+  const serviceChoices = [
+    ...[...catalog.services.values()].map((s) => ({ value: s.id, label: `${s.id} — ${s.displayName}` })),
+    { value: undefined, label: "Just a base project" },
+  ];
+  const serviceId = await askOptional(options.service, "What would you like to create?", serviceChoices);
 
   let moduleIds =
     serviceId === undefined
-      ? await buildCapabilityWizard(io, options.database, options.capabilities, options.cacheProvider)
+      ? await buildCapabilityWizard(options.database, options.capabilities, options.cacheProvider)
       : catalog.services.get(serviceId)!.modules;
 
   let archetypeAnswers: Record<string, string> = {};
@@ -584,12 +575,10 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     archetypeAnswers = manifest.answers;
   }
 
-  if (!hasText(options.basePackage) && isInteractive()) sectionHeader("Package");
   // Only prompt interactively when the flag was actually omitted (isInteractive() branch below);
   // non-interactive runs keep silently defaulting to DEFAULT_BASE_PACKAGE exactly as before.
   const basePackageInput = isInteractive() ? options.basePackage : (options.basePackage ?? DEFAULT_BASE_PACKAGE);
   const resolvedBasePackage = await askText(
-    io,
     basePackageInput,
     "base-package",
     "Base package",
@@ -597,28 +586,23 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     validateBasePackage,
   );
 
-  if (isInteractive() && !options.quiet && !options.dryRun && !options.yes) {
-    console.log(
-      [
-        "",
-        output.question("Summary:"),
-        `  Project:      ${output.accent(path.basename(target))}`,
-        `  Location:     ${output.accent(target)}`,
-        `  Base package: ${output.accent(resolvedBasePackage)}`,
-        `  Modules:      ${output.accent(moduleIds.join(", "))}`,
-        "",
-      ].join("\n"),
+  if (interactiveWizard && !options.dryRun && !options.yes) {
+    clack.note(
+      `Project:      ${path.basename(target)}\nLocation:     ${target}\nBase package: ${resolvedBasePackage}\nModules:      ${moduleIds.join(", ")}`,
+      "Summary",
     );
-    if (!(await askConfirm(io, "Proceed?", true))) {
-      console.log(output.hint("Aborted — no changes were made."));
+    if (!(await askConfirm("Proceed?", true))) {
+      clack.outro("Aborted — no changes were made.");
       return;
     }
   }
 
-  if (!options.quiet) {
+  const spin = interactiveWizard ? clack.spinner() : undefined;
+  if (interactiveWizard) {
+    spin?.start(options.dryRun ? "Previewing..." : "Setting up...");
+  } else if (!options.quiet) {
     console.log(`${options.dryRun ? "Previewing " : "Setting up "}${output.accent(target)}...`);
   }
-
   const result = await apply({
     targetProject: target,
     moduleIds,
@@ -627,19 +611,24 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     basePackage: resolvedBasePackage,
     projectName: path.basename(target),
   });
+  spin?.stop("Done.");
 
   switch (result.kind) {
     case "applied":
-      console.log(
-        [
-          output.ok(`Created ${target}`),
-          "",
-          output.question("Next steps:"),
-          `  cd ${target}`,
-          "  ./gradlew test",
-          "",
-        ].join("\n"),
-      );
+      if (interactiveWizard) {
+        clack.outro(`Created ${target}. Next: cd ${target} && ./gradlew test`);
+      } else {
+        console.log(
+          [
+            output.ok(`Created ${target}`),
+            "",
+            output.question("Next steps:"),
+            `  cd ${target}`,
+            "  ./gradlew test",
+            "",
+          ].join("\n"),
+        );
+      }
       break;
     case "dryRun":
       console.log(output.hint(`Dry run — would create ${target} with modules [${moduleIds.join(", ")}]`));
@@ -651,10 +640,10 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
   }
 }
 
-async function resolveTarget(io: ReplIo, name: string | undefined): Promise<string> {
+async function resolveTarget(name: string | undefined): Promise<string> {
   let candidate = name;
   while (true) {
-    const resolved = await askText(io, candidate, "name", "Project name", suggestProjectName());
+    const resolved = await askText(candidate, "name", "Project name", suggestProjectName());
     if (isEmptyProject(resolved)) return resolved;
     if (!isInteractive()) requireEmptyProject(resolved);
     console.log(output.err(`'${path.resolve(resolved)}' already exists and isn't empty.`));
@@ -672,18 +661,17 @@ function suggestProjectName(): string {
 }
 
 async function buildCapabilityWizard(
-  io: ReplIo,
   database: string | undefined,
   capabilities: string[] | undefined,
   cacheProvider: string | undefined,
 ): Promise<string[]> {
   const moduleIds: string[] = ["base"];
-  const databaseModule = await resolveDatabase(io, database);
+  const databaseModule = await resolveDatabase(database);
   if (databaseModule !== undefined) moduleIds.push(databaseModule);
 
-  const capabilityIds = await resolveCapabilityIds(io, capabilities, databaseModule);
+  const capabilityIds = await resolveCapabilityIds(capabilities, databaseModule);
   const cacheModule = capabilityIds.includes("caching")
-    ? await resolveCacheProvider(io, cacheProvider)
+    ? await resolveCacheProvider(cacheProvider)
     : undefined;
 
   for (const capability of capabilityIds) {
@@ -726,54 +714,52 @@ const CAPABILITY_TO_MODULE = (capability: string, databaseModule: string | undef
 // caller passed them via a CLI flag - these functions only need to fill in the interactive
 // prompt for whichever ones were omitted.
 
-async function resolveDatabase(io: ReplIo, database: string | undefined): Promise<string | undefined> {
+async function resolveDatabase(database: string | undefined): Promise<string | undefined> {
   if (database === "none") return undefined;
   if (database !== undefined) return database;
-  if (isInteractive()) sectionHeader("Database");
-  const choices = new Map([
-    ["PostgreSQL", "postgres"],
-    ["MySQL", "mysql"],
-    ["MariaDB", "mariadb"],
-    ["H2 (in-memory — dev/test only)", "h2"],
+  return askOptional(undefined, "Database", [
+    { value: "postgres", label: "PostgreSQL" },
+    { value: "mysql", label: "MySQL" },
+    { value: "mariadb", label: "MariaDB" },
+    { value: "h2", label: "H2 (in-memory — dev/test only)" },
+    { value: undefined, label: "None" },
   ]);
-  return askOptional(io, undefined, "Database", choices, "None");
 }
 
 async function resolveCapabilityIds(
-  io: ReplIo,
   capabilities: string[] | undefined,
   databaseModule: string | undefined,
 ): Promise<string[]> {
   if (capabilities !== undefined) return capabilities;
-  if (isInteractive()) sectionHeader("Capabilities");
-  const choices = new Map<string, string>();
-  choices.set("Validation", "validation");
-  if (databaseModule !== undefined) choices.set("Database migrations", "migrations");
-  choices.set("Security (JWT)", "security");
-  choices.set("Caching", "caching");
-  choices.set("AOP", "aop");
-  choices.set("Scheduling", "scheduling");
-  choices.set("Async processing", "async");
-  if (databaseModule !== undefined) choices.set("Auditing", "auditing");
-  choices.set("Observability", "observability");
-  choices.set("OpenAPI", "openapi");
-  if (databaseModule !== undefined) choices.set("Testing infrastructure", "testing");
-  return askMultiple(io, "Capabilities", choices);
+  const choices: { value: string; label: string }[] = [{ value: "validation", label: "Validation" }];
+  if (databaseModule !== undefined) choices.push({ value: "migrations", label: "Database migrations" });
+  choices.push(
+    { value: "security", label: "Security (JWT)" },
+    { value: "caching", label: "Caching" },
+    { value: "aop", label: "AOP" },
+    { value: "scheduling", label: "Scheduling" },
+    { value: "async", label: "Async processing" },
+  );
+  if (databaseModule !== undefined) choices.push({ value: "auditing", label: "Auditing" });
+  choices.push(
+    { value: "observability", label: "Observability" },
+    { value: "openapi", label: "OpenAPI" },
+  );
+  if (databaseModule !== undefined) choices.push({ value: "testing", label: "Testing infrastructure" });
+  return askMultiple("Capabilities", choices);
 }
 
-async function resolveCacheProvider(io: ReplIo, cacheProvider: string | undefined): Promise<string> {
+async function resolveCacheProvider(cacheProvider: string | undefined): Promise<string> {
   if (cacheProvider !== undefined) return cacheProvider === "redis" ? "caching-redis" : "caching-caffeine";
   if (!isInteractive()) return "caching-caffeine";
-  const choices = new Map([
-    ["Caffeine (in-process, no external service)", "caching-caffeine"],
-    ["Redis", "caching-redis"],
-  ]);
   return askChoice(
-    io,
     undefined,
     "cache-provider",
     "Cache provider",
-    choices,
-    "Caffeine (in-process, no external service)",
+    [
+      { value: "caching-caffeine", label: "Caffeine (in-process, no external service)" },
+      { value: "caching-redis", label: "Redis" },
+    ],
+    "caching-caffeine",
   );
 }

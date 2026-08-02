@@ -1,35 +1,21 @@
 #!/usr/bin/env bun
-import { createInterface } from "node:readline/promises";
 import { CommanderError } from "commander";
 import { buildProgram } from "./program.ts";
-import { createReplIo } from "./lineSource.ts";
-import { runRepl } from "./repl.ts";
 import { output } from "./wizard.ts";
 
-// Commander exit codes that mean "the requested info was already printed, exit cleanly" -
-// --help/-h -> commander.helpDisplayed, the `help` subcommand -> commander.help,
-// --version/-V -> commander.version. Anything else (commander.unknownCommand,
-// commander.invalidArgument, ...) is a real error with a useful message and should exit 1.
 const CLEAN_EXIT_CODES = new Set(["commander.helpDisplayed", "commander.help", "commander.version"]);
 
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-const io = createReplIo(rl);
-
 async function main(): Promise<void> {
+  // Bare `jloom` (no args at all) launches the `new` wizard directly, matching
+  // create-vite/create-t3-app/astro convention - inject "new" and let Commander parse it
+  // exactly as if the user had typed `jloom new`, so there's one code path, not two.
+  const argv = process.argv.length <= 2 ? [...process.argv, "new"] : process.argv;
   try {
-    if (process.argv.length <= 2) {
-      await runRepl(io);
-    } else {
-      try {
-        await buildProgram(io).parseAsync(process.argv);
-      } catch (err) {
-        if (err instanceof CommanderError && CLEAN_EXIT_CODES.has(err.code)) return;
-        console.error(output.err(err instanceof Error ? err.message : String(err)));
-        process.exitCode = 1;
-      }
-    }
-  } finally {
-    rl.close();
+    await buildProgram().parseAsync(argv);
+  } catch (err) {
+    if (err instanceof CommanderError && CLEAN_EXIT_CODES.has(err.code)) return;
+    console.error(output.err(err instanceof Error ? err.message : String(err)));
+    process.exitCode = 1;
   }
 }
 

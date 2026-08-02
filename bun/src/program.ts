@@ -1,5 +1,4 @@
 import { Command, InvalidArgumentError, Option } from "commander";
-import type { ReplIo } from "./lineSource.ts";
 import {
   CACHE_PROVIDER_IDS,
   CAPABILITY_IDS,
@@ -35,9 +34,9 @@ function parseCapabilities(value: string): (typeof CAPABILITY_IDS)[number][] {
 }
 
 // exitOverride prevents Commander from process.exit-ing on parse errors, help, or version
-// display - cli.ts and repl.ts catch CommanderError themselves so the REPL stays alive. showHelp
-// AfterError prints the full help text on a parse error, which is what users expect by default.
-export function buildProgram(io: ReplIo): Command {
+// display - cli.ts catches CommanderError itself. showHelpAfterError prints the full help text
+// on a parse error, which is what users expect by default.
+export function buildProgram(): Command {
   const program = new Command();
   program
     .name("jloom")
@@ -64,7 +63,7 @@ export function buildProgram(io: ReplIo): Command {
       // value through as "already answered" when the user actually typed the flag, so the
       // interactive wizard still gets a chance to ask (and offer a different default) otherwise.
       const basePackageWasExplicit = command.getOptionValueSource("basePackage") === "cli";
-      await runNew(io, {
+      await runNew({
         name: opts.name,
         service: opts.service,
         basePackage: basePackageWasExplicit ? opts.basePackage : undefined,
@@ -91,7 +90,7 @@ export function buildProgram(io: ReplIo): Command {
     .option("--dry-run", "Preview without writing.", false)
     .option("-y, --yes", "Skip the final confirmation prompt.", false)
     .action(async (moduleIds: string[], opts) => {
-      await runAdd(io, {
+      await runAdd({
         project: opts.project,
         moduleIds,
         set: opts.set,
@@ -115,7 +114,7 @@ export function buildProgram(io: ReplIo): Command {
     .description("Show what a module changes before applying it.")
     .option("--module <id>", "Module id, e.g. 'postgres'")
     .action(async (opts) => {
-      await runInfo(io, opts.module);
+      await runInfo(opts.module);
     });
 
   program
