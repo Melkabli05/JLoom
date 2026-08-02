@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { readBytes, readText, resolvePath } from "../registry/catalogRoots.ts";
-import { substitute } from "../merge/tokens.ts";
+import { substitute } from "../merge.ts";
 import type { ModuleManifest } from "../registry/types.ts";
 
 function isBinary(relativePath: string): boolean {

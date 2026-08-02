@@ -1,6 +1,4 @@
-import { applyOperations } from "../merge/executor.ts";
-import { composeUpgrade } from "../merge/recipeComposer.ts";
-import type { UpgradeStep } from "../merge/recipeComposer.ts";
+import { applyOperations, composeUpgrade, type UpgradeStep } from "../merge.ts";
 import { ModuleRegistry } from "../registry/moduleRegistry.ts";
 import type { Upgrade } from "../registry/types.ts";
 import { loadState, saveState, withApplied } from "../state/projectStateStore.ts";

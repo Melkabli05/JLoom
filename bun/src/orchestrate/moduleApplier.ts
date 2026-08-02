@@ -1,8 +1,6 @@
 import path from "node:path";
 import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "../initializr.ts";
-import { applyOperations } from "../merge/executor.ts";
-import { compose } from "../merge/recipeComposer.ts";
-import type { ModuleSelection } from "../merge/recipeComposer.ts";
+import { applyOperations, compose, type ModuleSelection } from "../merge.ts";
 import { ModuleRegistry } from "../registry/moduleRegistry.ts";
 import type { ModuleManifest } from "../registry/types.ts";
 import { copy } from "../scaffold/fileTreeCopier.ts";
