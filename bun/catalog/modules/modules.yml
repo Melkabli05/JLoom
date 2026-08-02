@@ -16,6 +16,7 @@ modules:
   - openapi
   - aop
   - scheduling
+  - async
   - auditing
   - problem-details
   - jwt-auth
