@@ -1,6 +1,9 @@
-import { Command } from "commander";
+import { Command, InvalidArgumentError, Option } from "commander";
 import type { ReplIo } from "./lineSource.ts";
 import {
+  CACHE_PROVIDER_IDS,
+  CAPABILITY_IDS,
+  DATABASE_IDS,
   listArchetypes,
   listModules,
   listServices,
@@ -19,6 +22,16 @@ function parseSetFlag(value: string, previous: Record<string, string>): Record<s
     if (eq > 0) result[pair.slice(0, eq)] = pair.slice(eq + 1);
   }
   return result;
+}
+
+function parseCapabilities(value: string): (typeof CAPABILITY_IDS)[number][] {
+  const ids = value.split(",").map((s) => s.trim()).filter((s) => s !== "");
+  for (const id of ids) {
+    if (!(CAPABILITY_IDS as readonly string[]).includes(id)) {
+      throw new InvalidArgumentError(`Unknown capability '${id}'. Allowed choices are ${CAPABILITY_IDS.join(", ")}.`);
+    }
+  }
+  return ids as (typeof CAPABILITY_IDS)[number][];
 }
 
 // exitOverride prevents Commander from process.exit-ing on parse errors, help, or version
@@ -40,9 +53,9 @@ export function buildProgram(io: ReplIo): Command {
     .option("--service <id>", "Service-type id, e.g. 'notification-service' (omit for a bare base project).")
     .option("--base-package <pkg>", "Base Java package.", "com.example.app")
     .option("--archetype <id>", "Apply an archetype's modules on top.")
-    .option("--database <db>", "Database for a bare project: postgres | mysql | mariadb | h2 | none.")
-    .option("--capabilities <list>", "Comma-separated capabilities, e.g. validation,security,caching.")
-    .option("--cache-provider <provider>", "caffeine | redis. Only relevant if 'caching' is in --capabilities.")
+    .addOption(new Option("--database <db>", "Database for a bare project.").choices(DATABASE_IDS))
+    .option("--capabilities <list>", "Comma-separated capabilities, e.g. validation,security,caching.", parseCapabilities)
+    .addOption(new Option("--cache-provider <provider>", "Only relevant if 'caching' is in --capabilities.").choices(CACHE_PROVIDER_IDS))
     .option("--dry-run", "Preview without writing.", false)
     .option("-q, --quiet", "Suppress non-essential output.", false)
     .action(async (opts) => {
@@ -54,8 +67,8 @@ export function buildProgram(io: ReplIo): Command {
         database: opts.database,
         capabilities: opts.capabilities,
         cacheProvider: opts.cacheProvider,
-        dryRun: Boolean(opts.dryRun),
-        quiet: Boolean(opts.quiet),
+        dryRun: opts.dryRun,
+        quiet: opts.quiet,
       });
     });
 
@@ -75,18 +88,17 @@ export function buildProgram(io: ReplIo): Command {
         project: opts.project,
         moduleIds,
         set: opts.set,
-        dryRun: Boolean(opts.dryRun),
+        dryRun: opts.dryRun,
       });
     });
 
   program
     .command("list")
     .description("List available modules, services, or archetypes.")
-    .option("--what <what>", "What to list: modules|services|archetypes.", "modules")
+    .addOption(new Option("--what <what>", "What to list.").choices(["modules", "services", "archetypes"]).default("modules"))
     .action((opts) => {
-      const w = (opts.what ?? "modules").toLowerCase();
-      if (w === "services") listServices();
-      else if (w === "archetypes") listArchetypes();
+      if (opts.what === "services") listServices();
+      else if (opts.what === "archetypes") listArchetypes();
       else listModules();
     });
 
@@ -113,7 +125,7 @@ export function buildProgram(io: ReplIo): Command {
     .option("--module <id>", "Upgrade only this module.")
     .option("--dry-run", "Preview without writing.", false)
     .action((opts) => {
-      upgrade(opts.project, opts.module, Boolean(opts.dryRun));
+      upgrade(opts.project, opts.module, opts.dryRun);
     });
 
   program

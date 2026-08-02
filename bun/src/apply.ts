@@ -1,6 +1,5 @@
 import path from "node:path";
-import { chmodSync, existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import type { ReplIo } from "./lineSource.ts";
 import { catalog, validate, findUpgradePath, readBytes, readText, resolvePath, type ModuleManifest, type Upgrade } from "./catalog.ts";
 import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "./initializr.ts";
@@ -20,7 +19,7 @@ const DEFAULT_PROJECT_NAME = "my-app";
 const DEFAULT_BASE_PACKAGE = "com.example.app";
 const BASE_PACKAGE_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/;
 
-export function isEmptyProject(dir: string): boolean {
+function isEmptyProject(dir: string): boolean {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return true;
   try {
     return readdirSync(dir).length === 0;
@@ -29,7 +28,7 @@ export function isEmptyProject(dir: string): boolean {
   }
 }
 
-export function requireEmptyProject(target: string): void {
+function requireEmptyProject(target: string): void {
   if (!isEmptyProject(target)) {
     throw new Error(
       `'${path.resolve(target)}' already exists and isn't empty — pass a different --name or remove it first.`,
@@ -47,7 +46,7 @@ function isExecutableScript(relativePath: string): boolean {
   return fileName === "gradlew" || fileName.endsWith(".sh") || fileName.endsWith(".command");
 }
 
-export function copyModuleFiles(manifest: ModuleManifest, targetRoot: string, tokens: Record<string, string>): void {
+function copyModuleFiles(manifest: ModuleManifest, targetRoot: string, tokens: Record<string, string>): void {
   for (const relativePath of manifest.fileTemplates) {
     const destinationRelativePath = substitute(relativePath, tokens);
     const destination = path.join(targetRoot, destinationRelativePath);
@@ -399,19 +398,6 @@ export function listArchetypes(): void {
   console.log(`${output.question("Available archetypes:")}\n${body}`);
 }
 
-export function runList(what: string): void {
-  switch (what.toLowerCase()) {
-    case "archetypes":
-      listArchetypes();
-      return;
-    case "services":
-      listServices();
-      return;
-    default:
-      listModules();
-  }
-}
-
 export function runStatus(project: string): void {
   const projectPath = path.resolve(project);
   const state = loadState(projectPath);
@@ -509,14 +495,30 @@ export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
   }
 }
 
+export const DATABASE_IDS = ["postgres", "mysql", "mariadb", "h2", "none"] as const;
+export const CACHE_PROVIDER_IDS = ["caffeine", "redis"] as const;
+export const CAPABILITY_IDS = [
+  "validation",
+  "migrations",
+  "security",
+  "caching",
+  "aop",
+  "scheduling",
+  "async",
+  "auditing",
+  "observability",
+  "openapi",
+  "testing",
+] as const;
+
 export interface NewOptions {
   name?: string;
   service?: string;
   basePackage: string;
   archetype?: string;
-  database?: string;
-  capabilities?: string;
-  cacheProvider?: string;
+  database?: (typeof DATABASE_IDS)[number];
+  capabilities?: (typeof CAPABILITY_IDS)[number][];
+  cacheProvider?: (typeof CACHE_PROVIDER_IDS)[number];
   dryRun: boolean;
   quiet: boolean;
 }
@@ -624,7 +626,7 @@ function suggestProjectName(): string {
 async function buildCapabilityWizard(
   io: ReplIo,
   database: string | undefined,
-  capabilities: string | undefined,
+  capabilities: string[] | undefined,
   cacheProvider: string | undefined,
 ): Promise<string[]> {
   const moduleIds: string[] = ["base"];
@@ -667,13 +669,18 @@ const CAPABILITY_TO_MODULE = (capability: string, databaseModule: string | undef
     case "testing":
       return "testcontainers";
     default:
-      throw new Error(`Unknown capability '${capability}' — expected one of: validation, migrations, security, caching, aop, scheduling, async, auditing, observability, openapi, testing`);
+      throw new Error(`Unknown capability '${capability}' — expected one of: ${CAPABILITY_IDS.join(", ")}`);
   }
 };
 
+// database/capabilities/cacheProvider are already validated against DATABASE_IDS/
+// CAPABILITY_IDS/CACHE_PROVIDER_IDS by Commander's .choices() (see program.ts) whenever the
+// caller passed them via a CLI flag - these functions only need to fill in the interactive
+// prompt for whichever ones were omitted.
+
 async function resolveDatabase(io: ReplIo, database: string | undefined): Promise<string | undefined> {
-  if (database?.toLowerCase() === "none") return undefined;
-  if (hasText(database)) return database;
+  if (database === "none") return undefined;
+  if (database !== undefined) return database;
   const choices = new Map([
     ["PostgreSQL", "postgres"],
     ["MySQL", "mysql"],
@@ -685,12 +692,10 @@ async function resolveDatabase(io: ReplIo, database: string | undefined): Promis
 
 async function resolveCapabilityIds(
   io: ReplIo,
-  capabilities: string | undefined,
+  capabilities: string[] | undefined,
   databaseModule: string | undefined,
 ): Promise<string[]> {
-  if (hasText(capabilities)) {
-    return capabilities.split(",").map((s) => s.trim()).filter((s) => s !== "");
-  }
+  if (capabilities !== undefined) return capabilities;
   const choices = new Map<string, string>();
   choices.set("Validation", "validation");
   if (databaseModule !== undefined) choices.set("Database migrations", "migrations");
@@ -707,9 +712,7 @@ async function resolveCapabilityIds(
 }
 
 async function resolveCacheProvider(io: ReplIo, cacheProvider: string | undefined): Promise<string> {
-  if (hasText(cacheProvider)) {
-    return cacheProvider.toLowerCase() === "redis" ? "caching-redis" : "caching-caffeine";
-  }
+  if (cacheProvider !== undefined) return cacheProvider === "redis" ? "caching-redis" : "caching-caffeine";
   if (!isInteractive()) return "caching-caffeine";
   const choices = new Map([
     ["Caffeine (in-process, no external service)", "caching-caffeine"],
