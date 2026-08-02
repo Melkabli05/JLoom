@@ -7,9 +7,6 @@ import com.jloom.registry.ArchetypeRegistry;
 import com.jloom.registry.ServiceManifest;
 import com.jloom.registry.ServiceRegistry;
 import com.jloom.util.ProjectPaths;
-import jakarta.validation.constraints.Pattern;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
@@ -19,14 +16,16 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-@Component
 @Command(name = "new", mixinStandardHelpOptions = true, description = "Create a new project. Generates immediately; pass --dry-run to preview.")
 public class NewCmd extends CliCommand implements Runnable {
 
     private static final String DEFAULT_PROJECT_NAME = "my-app";
     private static final String DEFAULT_BASE_PACKAGE = "com.example.app";
+    private static final Pattern BASE_PACKAGE_PATTERN =
+            Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*");
 
     @ParentCommand
     JloomCommand parent;
@@ -43,8 +42,6 @@ public class NewCmd extends CliCommand implements Runnable {
     @Option(names = "--base-package",
             description = "Base Java package.",
             defaultValue = DEFAULT_BASE_PACKAGE)
-    @Pattern(regexp = "[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*",
-            message = "must be a valid dotted Java package name, e.g. com.acme.myapp")
     String basePackage;
 
     @Option(names = "--archetype", description = "Apply an archetype's modules on top.")
@@ -71,7 +68,7 @@ public class NewCmd extends CliCommand implements Runnable {
         JloomContext ctx = parent.context();
         JloomPrompts prompts = ctx.prompts();
 
-        if (!quiet && !StringUtils.hasText(name) && prompts.isInteractive()) {
+        if (!quiet && !hasText(name) && prompts.isInteractive()) {
             System.out.println("Let's set up your project — press Enter on any question to accept the default.\n");
         }
         Path target = resolveTarget(name, prompts, ctx.services(), ctx.archetypes());
@@ -94,6 +91,10 @@ public class NewCmd extends CliCommand implements Runnable {
         }
 
         String resolvedBasePackage = prompts.promptWithDefault(basePackage, "base-package", "Base package", DEFAULT_BASE_PACKAGE);
+        if (!BASE_PACKAGE_PATTERN.matcher(resolvedBasePackage).matches()) {
+            throw new IllegalArgumentException(
+                    "--base-package must be a valid dotted Java package name, e.g. com.acme.myapp (got '" + resolvedBasePackage + "')");
+        }
 
         if (!quiet) {
             System.out.println((dryRun ? "Previewing " : "Setting up ") + target + "...");
@@ -158,7 +159,7 @@ public class NewCmd extends CliCommand implements Runnable {
 
     private String resolveFramework(ServiceManifest svc, String framework, JloomPrompts prompts) {
         String preferred = svc.framework().contains("spring-boot") ? "spring-boot" : svc.framework().get(0);
-        if (StringUtils.hasText(framework)) {
+        if (hasText(framework)) {
             return framework;
         }
         if (svc.framework().size() == 1) {
@@ -214,7 +215,7 @@ public class NewCmd extends CliCommand implements Runnable {
         if ("none".equalsIgnoreCase(database)) {
             return null;
         }
-        if (StringUtils.hasText(database)) {
+        if (hasText(database)) {
             return database;
         }
         Map<String, String> choices = new LinkedHashMap<>();
@@ -226,10 +227,10 @@ public class NewCmd extends CliCommand implements Runnable {
     }
 
     private List<String> resolveCapabilityIds(String capabilities, String databaseModule, JloomPrompts prompts) {
-        if (StringUtils.hasText(capabilities)) {
+        if (hasText(capabilities)) {
             return java.util.Arrays.stream(capabilities.split(","))
                     .map(String::trim)
-                    .filter(StringUtils::hasText)
+                    .filter(NewCmd::hasText)
                     .toList();
         }
         Map<String, String> choices = new LinkedHashMap<>();
@@ -254,7 +255,7 @@ public class NewCmd extends CliCommand implements Runnable {
     }
 
     private String resolveCacheProvider(String cacheProvider, JloomPrompts prompts) {
-        if (StringUtils.hasText(cacheProvider)) {
+        if (hasText(cacheProvider)) {
             return "redis".equalsIgnoreCase(cacheProvider) ? "caching-redis" : "caching-caffeine";
         }
         if (!prompts.isInteractive()) {
@@ -273,6 +274,10 @@ public class NewCmd extends CliCommand implements Runnable {
 
     private static String formatProblems(List<String> problems) {
         return String.join("\n  - ", problems);
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
     }
 
     static class DatabaseCandidates implements Iterable<String> {

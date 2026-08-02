@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -19,20 +18,7 @@ class JloomCommandsTest {
     Path tempDir;
 
     private CommandLine buildCommandLine(JloomContext context) {
-        JloomCommand root = new JloomCommand(context);
-        return new CommandLine(root)
-                .setExecutionExceptionHandler((ex, cmd, p) -> {
-                    Throwable c = ex.getCause() != null ? ex.getCause() : ex;
-                    cmd.getErr().println(picocli.CommandLine.Help.Ansi.AUTO.string("@|red ✗ " + c.getMessage() + "|@"));
-                    return cmd.getCommandSpec().exitCodeOnExecutionException();
-                })
-                .setParameterExceptionHandler((ex, args2) -> {
-                    String msg = ex instanceof picocli.CommandLine.UnmatchedArgumentException uae
-                            ? "Unknown argument: " + uae.getUnmatched().get(0)
-                            : ex.getMessage();
-                    ex.getCommandLine().getErr().println(picocli.CommandLine.Help.Ansi.AUTO.string("@|red ✗ " + msg + "|@"));
-                    return ex.getCommandLine().getCommandSpec().exitCodeOnInvalidInput();
-                });
+        return JloomCommandLine.create(new JloomCommand(context));
     }
 
     private JloomContext context() {

@@ -2,20 +2,16 @@ package com.jloom.cli;
 
 import com.jloom.registry.ModuleManifest;
 import com.jloom.registry.ModuleRegistry;
-import jakarta.validation.constraints.NotBlank;
-import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
-@Component
 @Command(name = "info", mixinStandardHelpOptions = true, description = "Show what a module changes before applying it.")
 public class InfoCmd extends CliCommand implements Runnable {
 
     @ParentCommand
     JloomCommand parent;
 
-    @NotBlank
     @Option(names = "--module", description = "Module id, e.g. 'postgres'", required = true)
     String moduleId;
 

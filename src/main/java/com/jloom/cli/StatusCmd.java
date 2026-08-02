@@ -4,14 +4,12 @@ import com.jloom.registry.ModuleRegistry;
 import com.jloom.state.AppliedModule;
 import com.jloom.state.ProjectState;
 import com.jloom.state.ProjectStateStore;
-import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
 import java.nio.file.Path;
 
-@Component
 @Command(name = "status", mixinStandardHelpOptions = true, description = "Show applied modules and whether newer versions exist.")
 public class StatusCmd extends CliCommand implements Runnable {
 

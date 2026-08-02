@@ -1,11 +1,9 @@
 package com.jloom.cli;
 
 import org.jline.terminal.Terminal;
-import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
-@Component
 @Command(name = "config", mixinStandardHelpOptions = true, description = "Print the resolved jloom configuration (env vars + defaults).")
 public class ConfigCmd extends CliCommand implements Runnable {
 

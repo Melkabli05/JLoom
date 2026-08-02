@@ -2,8 +2,6 @@ package com.jloom.cli;
 
 import com.jloom.orchestrate.ModuleApplier;
 import com.jloom.orchestrate.ModuleApplier.ApplyResult;
-import jakarta.validation.constraints.NotEmpty;
-import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -13,7 +11,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-@Component
 @Command(name = "add", mixinStandardHelpOptions = true, description = "Apply one or more modules to a project.")
 public class AddCmd extends CliCommand implements Runnable {
 
@@ -23,7 +20,6 @@ public class AddCmd extends CliCommand implements Runnable {
     @Option(names = "--project", defaultValue = ".", description = "Target project directory.")
     String project;
 
-    @NotEmpty
     @Parameters(arity = "1..*", description = "Module ids to add.")
     List<String> moduleIds;
 

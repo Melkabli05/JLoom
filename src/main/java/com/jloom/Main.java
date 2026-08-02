@@ -5,22 +5,18 @@ import com.jloom.cli.JloomCommandLine;
 import com.jloom.cli.JloomContext;
 import com.jloom.cli.JloomRepl;
 import org.jline.terminal.Terminal;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.jline.terminal.TerminalBuilder;
 
-@SpringBootApplication
 public final class Main {
 
     private Main() {
     }
 
-    public static void main(String[] args) {
-        ConfigurableApplicationContext spring = SpringApplication.run(Main.class, args);
+    public static void main(String[] args) throws Exception {
+        Terminal terminal = TerminalBuilder.builder().build();
         try {
-            JloomCommand root = spring.getBean(JloomCommand.class);
-            JloomContext context = spring.getBean(JloomContext.class);
-            Terminal terminal = spring.getBean(Terminal.class);
+            JloomContext context = new JloomContext(terminal);
+            JloomCommand root = new JloomCommand(context);
 
             // No args → drop into the interactive REPL. We do this BEFORE invoking
             // Picocli.execute() because a subcommand list with mixinStandardHelpOptions
@@ -34,7 +30,7 @@ public final class Main {
             int exitCode = JloomCommandLine.create(root).execute(args);
             System.exit(exitCode);
         } finally {
-            spring.close();
+            terminal.close();
         }
     }
 }

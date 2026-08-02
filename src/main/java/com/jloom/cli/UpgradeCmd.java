@@ -2,14 +2,12 @@ package com.jloom.cli;
 
 import com.jloom.orchestrate.UpgradeEngine;
 import com.jloom.orchestrate.UpgradeEngine.UpgradeResult;
-import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
 import java.nio.file.Path;
 
-@Component
 @Command(name = "upgrade", mixinStandardHelpOptions = true, description = "Upgrade applied modules to the catalog's current versions.")
 public class UpgradeCmd extends CliCommand implements Runnable {
 

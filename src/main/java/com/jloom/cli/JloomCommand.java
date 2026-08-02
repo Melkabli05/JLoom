@@ -9,12 +9,10 @@ import com.jloom.cli.ListCmd;
 import com.jloom.cli.NewCmd;
 import com.jloom.cli.StatusCmd;
 import com.jloom.cli.UpgradeCmd;
-import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
-@Component
 @Command(
         name = "jloom",
         mixinStandardHelpOptions = true,
