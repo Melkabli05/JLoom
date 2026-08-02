@@ -35,8 +35,6 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
-
-
                 auth.requestMatchers("/.well-known/jwks.json").permitAll();
                 for (String pathSpec : publicPaths(environment)) {
                     int separator = pathSpec.indexOf(':');
@@ -61,12 +59,6 @@ public class SecurityConfig {
                 .filter(entry -> !entry.isEmpty())
                 .toList();
     }
-
-
-
-
-
-
     @Bean
     public JwtDecoder jwtDecoder(@Value("${jwt.jwk-set-uri}") String jwkSetUri, @Value("${jwt.issuer}") String issuer) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();

@@ -9,21 +9,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RestController;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -53,8 +38,6 @@ class MdcUserIdEnrichmentAspect {
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;
         }
-
-
         if (ANONYMOUS_PRINCIPAL.equals(authentication.getName())) {
             return null;
         }
