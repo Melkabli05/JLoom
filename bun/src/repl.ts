@@ -1,14 +1,7 @@
+import { CommanderError } from "commander";
 import type { ReplIo } from "./lineSource.ts";
 import { catalog } from "./catalog.ts";
-import {
-  runAdd,
-  runConfig,
-  runInfo,
-  runList,
-  runNew,
-  runStatus,
-  upgrade,
-} from "./apply.ts";
+import { buildProgram } from "./program.ts";
 import { output } from "./wizard.ts";
 
 interface MenuEntry {
@@ -45,107 +38,10 @@ function printMenu(): void {
   console.log();
 }
 
-const USAGE = `jloom — generate and evolve production-ready backends.
-
-Usage:
-  jloom [command] [options]
-
-Commands:
-  new        Create a new project (interactive or via flags)
-  add        Add a module to an existing project
-  list       List available modules, services, or archetypes
-  info       Show what a module does before applying it
-  status     Show applied modules and any newer versions
-  upgrade    Pull newer versions of one or more modules
-  config     Print the resolved jloom configuration
-  help       Show this message
-
-Examples:
-  jloom new --name my-app --service user-service --base-package com.acme.demo
-  jloom add postgres flyway --project ./my-app
-  jloom list
-  jloom info --module postgres
-  jloom upgrade --dry-run`;
-
 function asMenuChoice(token: string): number | undefined {
   if (!/^\d+$/.test(token)) return undefined;
   const idx = Number.parseInt(token, 10);
   return idx >= 1 && idx <= MENU.length ? idx : undefined;
-}
-
-function tokenize(trimmed: string): string[] {
-  const tokens = trimmed.split(/\s+/);
-  if (tokens[0] === "jloom") return tokens.slice(1);
-  const choice = asMenuChoice(tokens[0]!);
-  if (choice !== undefined) tokens[0] = MENU[choice - 1]!.command;
-  return tokens;
-}
-
-function parseFlags(tokens: string[]): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (let i = 0; i < tokens.length - 1; i++) {
-    if (tokens[i]!.startsWith("--")) {
-      const key = tokens[i]!.slice(2);
-      const next = tokens[i + 1];
-      if (next !== undefined && !next.startsWith("--")) {
-        result[key] = next;
-      }
-    }
-  }
-  return result;
-}
-
-async function dispatch(io: ReplIo, tokens: string[]): Promise<void> {
-  const cmd = tokens[0];
-  const allArgs = tokens.slice(1);
-  const flags = parseFlags([cmd ?? "", ...allArgs]);
-  const nonFlagArgs = allArgs.filter((t) => !t.startsWith("--"));
-
-  if (cmd === undefined || cmd === "help") {
-    console.log(USAGE);
-    return;
-  }
-
-  switch (cmd) {
-    case "new":
-      await runNew(io, {
-        name: flags.name,
-        service: flags.service,
-        basePackage: flags["base-package"] ?? "com.example.app",
-        archetype: flags.archetype,
-        database: flags.database,
-        capabilities: flags.capabilities,
-        cacheProvider: flags["cache-provider"],
-        dryRun: flags["dry-run"] === "true",
-        quiet: flags.quiet === "true",
-      });
-      return;
-    case "add":
-      await runAdd(io, {
-        project: flags.project ?? ".",
-        moduleIds: nonFlagArgs,
-        set: {},
-        dryRun: flags["dry-run"] === "true",
-      });
-      return;
-    case "list":
-      runList(flags.what ?? "modules");
-      return;
-    case "info":
-      await runInfo(io, flags.module);
-      return;
-    case "status":
-      runStatus(flags.project ?? ".");
-      return;
-    case "upgrade":
-      upgrade(flags.project ?? ".", flags.module, flags["dry-run"] === "true");
-      return;
-    case "config":
-      runConfig();
-      return;
-    default:
-      throw new Error(`unknown command: ${cmd}`);
-  }
 }
 
 // Force eager catalog load at REPL startup so any load-time error surfaces immediately.
@@ -156,6 +52,10 @@ export async function runRepl(io: ReplIo): Promise<void> {
     io.rl.write("\n");
   });
 
+  // One Commander program instance is reused across every REPL iteration. exitOverride() (set
+  // in buildProgram) makes parse/help/version errors throw CommanderError instead of calling
+  // process.exit, which is what lets us keep the REPL running on bad input.
+  const program = buildProgram(io);
   const prompt = `${output.question("jloom")}> `;
   printMenu();
 
@@ -173,9 +73,19 @@ export async function runRepl(io: ReplIo): Promise<void> {
       continue;
     }
 
+    // Allow the user to type just a number (1..8) for the menu entry. With `from: "user"`
+    // the args are as a user would type them — just <cmd> <args>, no program-name prefix.
+    const tokens = trimmed.split(/\s+/);
+    const choice = asMenuChoice(tokens[0]!);
+    if (choice !== undefined) tokens[0] = MENU[choice - 1]!.command;
+
     try {
-      await dispatch(io, tokenize(trimmed));
+      await program.parseAsync(tokens, { from: "user" });
     } catch (err) {
+      // helpDisplayed/version already printed by Commander; don't re-emit or REPL quits.
+      if (err instanceof CommanderError && (err.code === "commander.help" || err.code === "commander.version")) {
+        continue;
+      }
       console.error(output.err(err instanceof Error ? err.message : String(err)));
     }
   }

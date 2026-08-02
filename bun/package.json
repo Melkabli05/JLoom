@@ -16,6 +16,7 @@
     "compile": "bun build src/cli.ts --compile --outfile dist/jloom && cp -R catalog dist/catalog"
   },
   "dependencies": {
+    "commander": "14",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
