@@ -1,4 +1,5 @@
 package {{package}}.notification.infrastructure.configuration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 @ConfigurationProperties(prefix = "notification.recovery")

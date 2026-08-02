@@ -1,4 +1,5 @@
 package {{package}}.notification.application.service;
+
 import {{package}}.notification.domain.model.Notification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -1,4 +1,5 @@
 package {{package}}.user.presentation.controller;
+
 import {{package}}.infrastructure.configuration.SecurityConfig;
 import {{package}}.user.application.service.UserService;
 import {{package}}.user.domain.model.Role;

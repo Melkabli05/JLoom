@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.storage;
+
 import {{package}}.file.domain.model.MediaPurpose;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;

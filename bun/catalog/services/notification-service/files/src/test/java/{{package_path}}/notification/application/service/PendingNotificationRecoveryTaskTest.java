@@ -1,4 +1,5 @@
 package {{package}}.notification.application.service;
+
 import {{package}}.notification.infrastructure.configuration.NotificationRecoveryProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

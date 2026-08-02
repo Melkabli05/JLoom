@@ -1,4 +1,5 @@
 package {{package}}.notification.application.service;
+
 import {{package}}.notification.domain.model.Notification;
 import {{package}}.notification.domain.model.NotificationChannel;
 import {{package}}.notification.domain.model.NotificationStatus;

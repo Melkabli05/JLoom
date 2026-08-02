@@ -54,3 +54,29 @@
     artifactId: lombok-mapstruct-binding
     version: 0.2.0
     configuration: annotationProcessor
+# Code formatter — every generated project gets Spotless with google-java-format pre-wired.
+# AddBuildPlugin registers com.diffplug.spotless in the plugins{} block; InsertIntoFile
+# appends the spotless{} DSL block to the end of build.gradle.kts (right after the closing
+# `}` of the plugins{} block, so the spotless extension is in scope). Running
+# `./gradlew spotlessApply` rewrites every Java file in standard Google Java Format;
+# `./gradlew spotlessCheck` fails the build on any unformatted file.
+- org.openrewrite.gradle.AddBuildPlugin:
+    pluginId: com.diffplug.spotless
+    version: 7.0.2
+- InsertIntoFile:
+    filePattern: "**/build.gradle.kts"
+    afterRegex: "^plugins \\{[\\s\\S]*?^}$"
+    line: |
+      spotless {
+          java {
+              target("**/*.java")
+              // Pin google-java-format 1.28.0: that's the version that works against the
+              // JDK internals in JDK 25; older versions baked into Spotless throw
+              // NoSuchMethodError on com.sun.tools.javac.util.Log$DeferredDiagnosticHandler.
+              googleJavaFormat("1.28.0")
+              removeUnusedImports()
+              trimTrailingWhitespace()
+              leadingTabsToSpaces()
+              endWithNewline()
+          }
+      }

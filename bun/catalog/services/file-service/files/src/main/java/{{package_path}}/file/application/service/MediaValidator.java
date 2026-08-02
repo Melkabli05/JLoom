@@ -1,4 +1,5 @@
 package {{package}}.file.application.service;
+
 import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.io.InputStream;

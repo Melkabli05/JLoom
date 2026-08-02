@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.persistence;
+
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaAssetStatus;
 import org.springframework.data.domain.Pageable;

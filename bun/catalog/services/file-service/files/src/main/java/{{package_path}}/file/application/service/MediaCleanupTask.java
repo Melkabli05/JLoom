@@ -1,4 +1,5 @@
 package {{package}}.file.application.service;
+
 import {{package}}.file.infrastructure.configuration.MediaProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.scheduling.annotation.Scheduled;

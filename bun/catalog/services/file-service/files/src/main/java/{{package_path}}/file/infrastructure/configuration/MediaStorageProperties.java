@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.configuration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.unit.DataSize;
 import java.time.Duration;

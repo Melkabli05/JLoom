@@ -1,4 +1,5 @@
 package {{package}}.file.application.exception;
+
 import java.util.Set;
 public class UnsupportedMediaTypeException extends RuntimeException {
     private static final long serialVersionUID = 1L;

@@ -1,4 +1,5 @@
 package {{package}}.file.application.service;
+
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaAssetStatus;
 import {{package}}.file.domain.model.MediaVisibility;

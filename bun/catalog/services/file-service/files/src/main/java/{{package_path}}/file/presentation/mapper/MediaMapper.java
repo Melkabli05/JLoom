@@ -1,4 +1,5 @@
 package {{package}}.file.presentation.mapper;
+
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.presentation.dto.MediaUploadResponse;
 import {{package}}.file.presentation.dto.MediaView;

@@ -1,4 +1,5 @@
 package {{package}}.notification.application.service;
+
 import {{package}}.notification.infrastructure.configuration.NotificationRecoveryProperties;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

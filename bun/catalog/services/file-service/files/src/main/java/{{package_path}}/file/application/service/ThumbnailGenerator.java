@@ -1,4 +1,5 @@
 package {{package}}.file.application.service;
+
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.infrastructure.configuration.MediaProperties;
 import {{package}}.file.infrastructure.persistence.MediaAssetRepository;

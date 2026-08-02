@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.storage;
+
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;

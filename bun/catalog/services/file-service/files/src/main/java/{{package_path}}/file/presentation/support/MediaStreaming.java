@@ -1,4 +1,5 @@
 package {{package}}.file.presentation.support;
+
 import {{package}}.file.infrastructure.storage.MediaObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;

@@ -1,4 +1,5 @@
 package {{package}}.user.application.service;
+
 import {{package}}.user.domain.model.Role;
 import {{package}}.user.domain.model.User;
 import {{package}}.user.infrastructure.persistence.UserRepository;

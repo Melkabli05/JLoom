@@ -1,4 +1,5 @@
 package {{package}}.file.presentation.controller;
+
 import {{package}}.file.application.service.MediaService;
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaPurpose;

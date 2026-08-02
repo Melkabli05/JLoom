@@ -1,4 +1,5 @@
 package {{package}}.user.presentation.mapper;
+
 import {{package}}.user.domain.model.User;
 import {{package}}.user.presentation.dto.UserView;
 import {{package}}.user.presentation.dto.VerifyCredentialsResponse;

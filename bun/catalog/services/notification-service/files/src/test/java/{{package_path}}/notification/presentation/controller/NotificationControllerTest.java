@@ -1,4 +1,5 @@
 package {{package}}.notification.presentation.controller;
+
 import {{package}}.infrastructure.configuration.SecurityConfig;
 import {{package}}.notification.application.service.NotificationService;
 import {{package}}.notification.domain.model.Notification;

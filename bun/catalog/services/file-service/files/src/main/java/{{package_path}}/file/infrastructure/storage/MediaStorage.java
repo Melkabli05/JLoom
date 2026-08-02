@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.storage;
+
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;

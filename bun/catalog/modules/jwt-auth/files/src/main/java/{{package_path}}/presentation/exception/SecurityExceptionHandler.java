@@ -1,4 +1,5 @@
 package {{package}}.presentation.exception;
+
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;

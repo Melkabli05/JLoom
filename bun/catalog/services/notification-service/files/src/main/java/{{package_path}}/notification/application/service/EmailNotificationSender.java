@@ -1,4 +1,5 @@
 package {{package}}.notification.application.service;
+
 import {{package}}.notification.domain.model.FailureReason;
 import {{package}}.notification.domain.model.NotificationChannel;
 import {{package}}.notification.infrastructure.persistence.NotificationRepository;

@@ -1,4 +1,5 @@
 package {{package}}.user.infrastructure.persistence;
+
 import {{package}}.user.domain.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;

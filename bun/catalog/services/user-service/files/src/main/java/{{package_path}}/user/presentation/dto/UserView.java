@@ -1,4 +1,5 @@
 package {{package}}.user.presentation.dto;
+
 import {{package}}.user.domain.model.Role;
 import java.time.Instant;
 import java.util.UUID;

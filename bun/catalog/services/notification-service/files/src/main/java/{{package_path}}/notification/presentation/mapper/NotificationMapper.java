@@ -1,4 +1,5 @@
 package {{package}}.notification.presentation.mapper;
+
 import {{package}}.notification.domain.model.Notification;
 import {{package}}.notification.presentation.dto.NotificationDetailView;
 import {{package}}.notification.presentation.dto.NotificationView;

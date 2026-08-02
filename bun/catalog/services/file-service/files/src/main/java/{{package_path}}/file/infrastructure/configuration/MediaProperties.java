@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.configuration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.awt.Dimension;
 import java.time.Duration;

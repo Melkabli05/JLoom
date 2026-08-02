@@ -1,4 +1,5 @@
 package {{package}}.notification.presentation.dto;
+
 import {{package}}.notification.domain.model.FailureReason;
 import {{package}}.notification.domain.model.NotificationChannel;
 import {{package}}.notification.domain.model.NotificationStatus;

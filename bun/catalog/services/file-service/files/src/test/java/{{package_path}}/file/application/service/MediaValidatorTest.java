@@ -1,4 +1,5 @@
 package {{package}}.file.application.service;
+
 import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

@@ -1,4 +1,5 @@
 package {{package}}.notification.infrastructure.persistence;
+
 import {{package}}.notification.domain.model.Notification;
 import {{package}}.notification.domain.model.NotificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;

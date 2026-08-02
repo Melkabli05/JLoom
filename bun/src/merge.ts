@@ -4,9 +4,11 @@ import path from "node:path";
 import { readText, type ModuleManifest } from "./catalog.ts";
 export type MergeOp =
   | { kind: "AddDependency"; groupId: string; artifactId: string; version?: string; configuration: string }
+  | { kind: "AddBuildPlugin"; pluginId: string; version?: string; apply?: boolean }
   | { kind: "MergeYaml"; key: string; yaml: string; filePattern: string }
   | { kind: "ChangePropertyKey"; oldPropertyKey: string; newPropertyKey: string; filePattern: string }
-  | { kind: "CreateTextFile"; relativeFileName: string; fileContents: string; overwriteExisting: boolean };
+  | { kind: "CreateTextFile"; relativeFileName: string; fileContents: string; overwriteExisting: boolean }
+  | { kind: "InsertIntoFile"; filePattern: string; afterRegex: string; line: string };
 export function substitute(text: string, tokens: Record<string, string>): string {
   let out = text;
   for (const [k, v] of Object.entries(tokens)) out = out.split(`{{${k}}}`).join(v);
@@ -82,6 +84,13 @@ function parseOperation(moduleId: string, resourcePath: string, entry: unknown):
         version: params.version === undefined ? undefined : String(params.version),
         configuration: String(params.configuration),
       };
+    case "org.openrewrite.gradle.AddBuildPlugin":
+      return {
+        kind: "AddBuildPlugin",
+        pluginId: String(params.pluginId),
+        version: params.version === undefined ? undefined : String(params.version),
+        apply: params.apply === undefined ? undefined : params.apply === true,
+      };
     case "org.openrewrite.yaml.MergeYaml":
       return {
         kind: "MergeYaml",
@@ -103,6 +112,14 @@ function parseOperation(moduleId: string, resourcePath: string, entry: unknown):
         fileContents: String(params.fileContents),
         overwriteExisting: params.overwriteExisting === true,
       };
+    case "org.openrewrite.kotlin.InsertSemicolon":
+    case "InsertIntoFile":
+      return {
+        kind: "InsertIntoFile",
+        filePattern: String(params.filePattern),
+        afterRegex: String(params.afterRegex ?? params.after ?? ""),
+        line: String(params.line),
+      };
     default:
       throw new Error(`Fragment ${moduleId}/${resourcePath} uses unsupported recipe type: ${recipeType}`);
   }
@@ -113,6 +130,9 @@ export function applyOperations(root: string, ops: MergeOp[]): void {
       case "AddDependency":
         applyAddDep(root, op);
         break;
+      case "AddBuildPlugin":
+        applyAddBuildPlugin(root, op);
+        break;
       case "MergeYaml":
         applyMergeYaml(root, op);
         break;
@@ -121,6 +141,9 @@ export function applyOperations(root: string, ops: MergeOp[]): void {
         break;
       case "CreateTextFile":
         applyCreateFile(root, op);
+        break;
+      case "InsertIntoFile":
+        applyInsertIntoFile(root, op);
         break;
     }
   }
@@ -147,6 +170,24 @@ function findBuildFile(root: string): string {
     if (existsSync(full)) return full;
   }
   throw new Error(`No build.gradle.kts or build.gradle found under ${root}`);
+}
+
+const PLUGINS_BLOCK = /plugins\s*\{/;
+function applyAddBuildPlugin(root: string, op: { pluginId: string; version?: string; apply?: boolean }): void {
+  const buildFile = findBuildFile(root);
+  const content = readFileSync(buildFile, "utf8");
+  if (content.includes(`id("${op.pluginId}")`) || content.includes(`id('${op.pluginId}')`)) {
+    return;
+  }
+  const match = content.match(PLUGINS_BLOCK);
+  if (match === null || match.index === undefined) {
+    throw new Error("Could not find a 'plugins {' block to insert into");
+  }
+  const insertAt = match.index + match[0].length;
+  const versionPart = op.version === undefined ? "" : ` version "${op.version}"`;
+  const applyPart = op.apply === true ? " apply true" : "";
+  const line = `\n\tid("${op.pluginId}")${versionPart}${applyPart}`;
+  writeFileSync(buildFile, content.slice(0, insertAt) + line + content.slice(insertAt), "utf8");
 }
 function applyMergeYaml(root: string, op: { key: string; yaml: string; filePattern: string }): void {
   for (const file of filesMatching(root, op.filePattern)) {
@@ -277,4 +318,19 @@ function applyCreateFile(root: string, op: { relativeFileName: string; fileConte
   if (existsSync(target) && !op.overwriteExisting) return;
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, op.fileContents, "utf8");
+}
+
+function applyInsertIntoFile(root: string, op: { filePattern: string; afterRegex: string; line: string }): void {
+  if (op.afterRegex === "") return;
+  for (const file of filesMatching(root, op.filePattern)) {
+    const content = existsSync(file) ? readFileSync(file, "utf8") : "";
+    if (content.includes(op.line)) continue;
+    const re = new RegExp(op.afterRegex, "m");
+    const match = content.match(re);
+    if (match === null || match.index === undefined) {
+      throw new Error(`InsertIntoFile: pattern /${op.afterRegex}/ did not match any line in ${file}`);
+    }
+    const insertAt = match.index + match[0].length;
+    writeFileSync(file, content.slice(0, insertAt) + "\n" + op.line + content.slice(insertAt), "utf8");
+  }
 }

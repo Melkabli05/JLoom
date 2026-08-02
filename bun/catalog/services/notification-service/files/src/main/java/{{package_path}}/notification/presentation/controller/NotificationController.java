@@ -1,4 +1,5 @@
 package {{package}}.notification.presentation.controller;
+
 import {{package}}.notification.application.service.NotificationService;
 import {{package}}.notification.presentation.dto.NotificationDetailView;
 import {{package}}.notification.presentation.dto.NotificationView;

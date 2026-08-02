@@ -1,4 +1,5 @@
 package {{package}}.file.infrastructure.configuration;
+
 import {{package}}.file.infrastructure.storage.LocalFilesystemStorage;
 import {{package}}.file.infrastructure.storage.MediaStorage;
 import {{package}}.file.infrastructure.storage.MinioStorage;

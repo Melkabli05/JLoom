@@ -1,4 +1,5 @@
 package {{package}}.user.presentation.controller;
+
 import {{package}}.user.application.service.UserService;
 import {{package}}.user.presentation.dto.VerifyCredentialsRequest;
 import {{package}}.user.presentation.dto.VerifyCredentialsResponse;
