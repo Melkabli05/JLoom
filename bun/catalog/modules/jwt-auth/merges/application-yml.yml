@@ -8,10 +8,17 @@
 # SecurityConfig.java falls back to "" if no other module sets it. A module that needs a public
 # endpoint adds this key via its own application-yml merge (e.g. user-service adds "POST:/users"
 # for registration).
+#
+# No `jwt.expiration-seconds` here (an earlier version of this file set it) — nothing ever read
+# it; the resource server validates whatever `exp` claim is already baked into an incoming token,
+# it doesn't have its own expiration setting. The actual TTL a token is issued with is
+# identity-service's own `jwt.token-ttl-seconds`, a completely separate (issuer-side) concern.
 - org.openrewrite.yaml.MergeYaml:
     key: $.jwt
     yaml: |
       jwk-set-uri: "{{jwt_jwk_set_uri}}"
       issuer: jloom-app
-      expiration-seconds: 3600
+      audience: "{{jwt_audience}}"
+      cors:
+        allowed-origins: "{{cors_allowed_origins}}"
     filePattern: "**/application.yml"

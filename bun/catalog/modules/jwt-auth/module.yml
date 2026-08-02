@@ -5,8 +5,29 @@
 # enabled for @PreAuthorize elsewhere). File templates and merge recipes both apply within the
 # same module batch, before any Gradle/OpenRewrite step runs — see ModuleApplier — so there's no
 # chicken-and-egg with the new dependencies this module also adds.
+#
+# jwt-auth 3.0.0 -> 3.1.0: production-hardening pass, researched against the current official
+# Spring Security 7.1 / Spring Boot 4.1 source (this project's actual resolved versions):
+# - JwtDecoder now requires the `exp` claim (Spring Security 7's JwtTimestampValidator defaults
+#   allowEmptyExpiryClaim to true, meaning a token with no exp at all was previously accepted as
+#   never-expiring) and pins RS256 explicitly (defense-in-depth against algorithm confusion,
+#   even though it was already Nimbus's own implicit default for a JWK-Set-backed decoder).
+# - Optional audience validation (jwt.audience, blank by default) — paired with identity-service's
+#   own optional aud-claim embedding under the same property key.
+# - CORS support (jwt.cors.allowed-origins, blank by default = no cross-origin browser access,
+#   matching "least privilege" — CORS is a browser-only mechanism, so this never affects
+#   non-browser clients).
+# - Fixed a real gap: only /actuator/health and /actuator/info were permitAll'd, while base's own
+#   application-yml already exposes /actuator/metrics and /actuator/prometheus — meaning a
+#   Prometheus scraper (which never presents a JWT) would get 401'd. Broadened to /actuator/**,
+#   matching base's own curated exposure list.
+# - New ProblemDetailAuthenticationEntryPoint for consistent 401 bodies, composing (not
+#   replacing) Spring's own BearerTokenAuthenticationEntryPoint for RFC 6750-correct headers —
+#   a missing/invalid token never reaches @RestControllerAdvice at all (it's intercepted by
+#   ExceptionTranslationFilter before Spring MVC's own dispatch), so SecurityExceptionHandler's
+#   existing 403 handling couldn't cover this on its own.
 id: jwt-auth
-version: 3.0.0
+version: 3.1.0
 requires: []
 conflicts: []
 provides: capability:auth
@@ -17,9 +38,26 @@ prompts:
   - key: jwt_jwk_set_uri
     type: string
     default: http://localhost:8081/.well-known/jwks.json
+  # Blank = audience validation skipped. Set the same value here and on identity-service's own
+  # jwt_audience prompt to require tokens to carry a matching `aud` claim — meaningful once
+  # multiple independently-deployed resource servers share one identity-service, so a token
+  # minted for one can't be replayed against another.
+  - key: jwt_audience
+    type: string
+    default: ""
+  # Blank = no cross-origin browser access permitted (secure default). Comma-separated list of
+  # real frontend origin(s) for a browser-based client, e.g. https://app.example.com.
+  - key: cors_allowed_origins
+    type: string
+    default: ""
 mergeRecipes:
   - merges/gradle.yml
   - merges/application-yml.yml
 fileTemplates:
   - src/main/java/{{package_path}}/infrastructure/configuration/SecurityConfig.java
+  - src/main/java/{{package_path}}/infrastructure/configuration/ProblemDetailAuthenticationEntryPoint.java
   - src/main/java/{{package_path}}/presentation/exception/SecurityExceptionHandler.java
+upgrades:
+  - from: 3.0.0
+    to: 3.1.0
+    recipe: recipes/v3.0.0-to-v3.1.0.yml
