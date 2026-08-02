@@ -4,6 +4,7 @@ import {
   CAPABILITY_IDS,
   DATABASE_IDS,
   listArchetypes,
+  listCapabilities,
   listModules,
   listServices,
   runAdd,
@@ -21,14 +22,14 @@ function parseSetFlag(value: string, previous: Record<string, string>): Record<s
   }
   return result;
 }
-function parseCapabilities(value: string): (typeof CAPABILITY_IDS)[number][] {
+function parseCapabilities(value: string): string[] {
   const ids = value.split(",").map((s) => s.trim()).filter((s) => s !== "");
   for (const id of ids) {
-    if (!(CAPABILITY_IDS as readonly string[]).includes(id)) {
+    if (!CAPABILITY_IDS.includes(id)) {
       throw new InvalidArgumentError(`Unknown capability '${id}'. Allowed choices are ${CAPABILITY_IDS.join(", ")}.`);
     }
   }
-  return ids as (typeof CAPABILITY_IDS)[number][];
+  return ids;
 }
 
 
@@ -50,7 +51,7 @@ export function buildProgram(): Command {
     .option("--base-package <pkg>", "Base Java package.", "com.example.app")
     .option("--archetype <id>", "Apply an archetype's modules on top.")
     .addOption(new Option("--database <db>", "Database for a bare project.").choices(DATABASE_IDS))
-    .option("--capabilities <list>", "Comma-separated capabilities, e.g. validation,security,caching.", parseCapabilities)
+    .option("--capabilities <list>", "Comma-separated capabilities, e.g. validation,auth,caching. See 'jloom list --what capabilities'.", parseCapabilities)
     .addOption(new Option("--cache-provider <provider>", "Only relevant if 'caching' is in --capabilities.").choices(CACHE_PROVIDER_IDS))
     .option("--dry-run", "Preview without writing.", false)
     .option("-q, --quiet", "Suppress non-essential output.", false)
@@ -97,10 +98,11 @@ export function buildProgram(): Command {
   program
     .command("list")
     .description("List available modules, services, or archetypes.")
-    .addOption(new Option("--what <what>", "What to list.").choices(["modules", "services", "archetypes"]).default("modules"))
+    .addOption(new Option("--what <what>", "What to list.").choices(["modules", "services", "archetypes", "capabilities"]).default("modules"))
     .action((opts) => {
       if (opts.what === "services") listServices();
       else if (opts.what === "archetypes") listArchetypes();
+      else if (opts.what === "capabilities") listCapabilities();
       else listModules();
     });
   program

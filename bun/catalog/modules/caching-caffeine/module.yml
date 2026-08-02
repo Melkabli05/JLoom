@@ -10,6 +10,7 @@ version: 1.1.0
 requires: []
 conflicts: [caching-redis]
 provides: capability:caching
+description: Caffeine (in-process, no external service)
 prompts: []
 mergeRecipes:
   - merges/gradle.yml

@@ -49,6 +49,7 @@ export interface ModuleManifest {
   requires: string[];
   conflicts: string[];
   provides?: string;
+  description?: string;
   prompts: Prompt[];
   mergeRecipes: string[];
   fileTemplates: string[];
@@ -89,6 +90,7 @@ function parseModuleManifest(raw: unknown): ModuleManifest {
   const requires = stringList(obj.requires);
   const conflicts = stringList(obj.conflicts);
   const provides = obj.provides === undefined || obj.provides === null ? undefined : String(obj.provides);
+  const description = obj.description === undefined || obj.description === null ? undefined : String(obj.description);
   const prompts: Prompt[] = [];
   if (Array.isArray(obj.prompts)) {
     for (const item of obj.prompts) {
@@ -122,7 +124,7 @@ function parseModuleManifest(raw: unknown): ModuleManifest {
     }
   }
   const scaffold = obj.scaffold === true;
-  return { id, version, requires, conflicts, provides, prompts, mergeRecipes, fileTemplates, upgrades, scaffold };
+  return { id, version, requires, conflicts, provides, description, prompts, mergeRecipes, fileTemplates, upgrades, scaffold };
 }
 export interface Catalog {
   modules: Map<string, ModuleManifest>;
@@ -260,4 +262,128 @@ function isSatisfied(catalog: Catalog, requirement: string, effectiveModuleIds: 
     });
   }
   return effectiveModuleIds.includes(requirement);
+}
+
+export function capabilityProviders(catalog: Catalog, capability: string): ModuleManifest[] {
+  return [...catalog.modules.values()].filter((m) => m.provides === capability);
+}
+
+export interface ResolutionResult {
+  moduleIds: string[];
+  added: string[];
+  problems: string[];
+}
+
+// undefined = couldn't resolve (non-interactive, or the user declined) — the caller reports the
+// candidates as a problem instead of guessing.
+export type ProviderPicker = (capability: string, candidates: ModuleManifest[]) => Promise<string | undefined>;
+
+// Auto-resolves + auto-orders a requested module list against the catalog's own
+// requires/provides/conflicts metadata: a post-order DFS over requestedIds resolves each
+// module's requirements before the module itself, which alone gives correct topological
+// ordering (no more "list it earlier" errors). A capability requirement with more than one
+// provider is delegated to pickProvider (asked at most once per capability per resolution
+// pass — the answer is cached and reused for every other module needing the same capability).
+export async function resolveModules(
+  catalog: Catalog,
+  alreadyApplied: string[],
+  requestedIds: string[],
+  pickProvider: ProviderPicker,
+  preResolved: Map<string, string> = new Map(),
+): Promise<ResolutionResult> {
+  const resolved = new Set(alreadyApplied);
+  const inProgress = new Set<string>();
+  const capabilityAnswers = new Map(preResolved);
+  const ordered: string[] = [];
+  const problems: string[] = [];
+
+  // If the user explicitly requested a module that provides some capability, treat that as the
+  // answer for that capability regardless of where it's listed in the batch — this is what
+  // makes e.g. `jloom add flyway-mysql mariadb` (dependency listed AFTER its dependent) just
+  // work instead of asking to disambiguate among every catalog provider of capability:
+  // relational-db. preResolved (explicit --database/--cache-provider style answers) still wins
+  // if both are somehow set.
+  for (const id of requestedIds) {
+    const manifest = catalog.modules.get(id);
+    if (manifest?.provides !== undefined && !capabilityAnswers.has(manifest.provides)) {
+      capabilityAnswers.set(manifest.provides, id);
+    }
+  }
+
+  async function resolveRequirement(requirement: string): Promise<void> {
+    if (isSatisfied(catalog, requirement, [...resolved])) return;
+    if (!requirement.startsWith("capability:")) {
+      await resolveId(requirement);
+      return;
+    }
+    const cached = capabilityAnswers.get(requirement);
+    if (cached !== undefined) {
+      await resolveId(cached);
+      return;
+    }
+    const candidates = capabilityProviders(catalog, requirement);
+    if (candidates.length === 0) {
+      problems.push(`No module in the catalog provides '${requirement}'`);
+      return;
+    }
+    if (candidates.length === 1) {
+      capabilityAnswers.set(requirement, candidates[0]!.id);
+      await resolveId(candidates[0]!.id);
+      return;
+    }
+    const chosen = await pickProvider(requirement, candidates);
+    if (chosen === undefined) {
+      problems.push(
+        `'${requirement}' has multiple providers [${candidates.map((c) => c.id).join(", ")}] — pass one explicitly, e.g. jloom add ${candidates[0]!.id}`,
+      );
+      return;
+    }
+    capabilityAnswers.set(requirement, chosen);
+    await resolveId(chosen);
+  }
+
+  async function resolveId(id: string): Promise<void> {
+    if (resolved.has(id)) return;
+    const manifest = catalog.modules.get(id);
+    if (manifest === undefined) {
+      problems.push(`Unknown module: ${id}`);
+      return;
+    }
+    if (inProgress.has(id)) {
+      problems.push(`Circular requirement detected involving '${id}'`);
+      return;
+    }
+    inProgress.add(id);
+    for (const requirement of manifest.requires) {
+      await resolveRequirement(requirement);
+    }
+    inProgress.delete(id);
+    if (resolved.has(id)) return;
+    ordered.push(id);
+    resolved.add(id);
+  }
+
+  for (const id of requestedIds) {
+    await resolveId(id);
+  }
+
+  const effective = [...alreadyApplied, ...ordered];
+  for (const id of ordered) {
+    const manifest = catalog.modules.get(id);
+    if (manifest === undefined) continue;
+    for (const conflict of manifest.conflicts) {
+      if (conflict !== id && effective.includes(conflict)) {
+        problems.push(`${id} conflicts with '${conflict}', which is already applied or in this request`);
+      }
+    }
+  }
+
+  // "added" = resolved beyond what was literally requested — computed at the end (not tracked
+  // during resolution) so it's correct regardless of the order dependencies were resolved in,
+  // e.g. `jloom add flyway-mysql mariadb` must never report "mariadb" as auto-added just
+  // because it happened to get pulled in while resolving flyway-mysql's requirement first.
+  const requestedSet = new Set(requestedIds);
+  const added = ordered.filter((id) => !requestedSet.has(id));
+
+  return { moduleIds: ordered, added, problems };
 }

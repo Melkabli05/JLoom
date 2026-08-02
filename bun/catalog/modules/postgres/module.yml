@@ -7,6 +7,7 @@ version: 1.2.0
 requires: []
 conflicts: [h2, mysql, mariadb]
 provides: capability:relational-db
+description: PostgreSQL
 prompts:
   - key: db_name
     type: string

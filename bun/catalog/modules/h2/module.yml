@@ -6,6 +6,7 @@ version: 1.0.0
 requires: []
 conflicts: [postgres, mysql, mariadb]
 provides: capability:relational-db
+description: H2 (in-memory — dev/test only)
 prompts:
   - key: db_name
     type: string

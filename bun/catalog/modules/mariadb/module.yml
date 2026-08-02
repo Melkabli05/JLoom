@@ -4,6 +4,7 @@ version: 1.0.0
 requires: []
 conflicts: [postgres, h2, mysql]
 provides: capability:relational-db
+description: MariaDB
 prompts:
   - key: db_name
     type: string

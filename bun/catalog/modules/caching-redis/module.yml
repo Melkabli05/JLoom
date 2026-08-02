@@ -5,6 +5,7 @@ version: 1.1.0
 requires: []
 conflicts: [caching-caffeine]
 provides: capability:caching
+description: Redis
 prompts: []
 mergeRecipes:
   - merges/gradle.yml

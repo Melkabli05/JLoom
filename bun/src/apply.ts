@@ -1,7 +1,19 @@
 import path from "node:path";
 import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import * as clack from "@clack/prompts";
-import { catalog, validate, findUpgradePath, readBytes, readText, resolvePath, type ModuleManifest, type Upgrade } from "./catalog.ts";
+import {
+  catalog,
+  validate,
+  resolveModules,
+  capabilityProviders,
+  findUpgradePath,
+  readBytes,
+  readText,
+  resolvePath,
+  type ModuleManifest,
+  type ProviderPicker,
+  type Upgrade,
+} from "./catalog.ts";
 import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "./initializr.ts";
 import { applyOperations, compose, composeUpgrade, substitute, type ModuleSelection, type UpgradeStep } from "./merge.ts";
 import { askChoice, askConfirm, askMultiple, askNonBlankText, askOptional, askText, isInteractive, output } from "./wizard.ts";
@@ -60,10 +72,13 @@ function copyModuleFiles(manifest: ModuleManifest, targetRoot: string, tokens: R
   }
 }
 export type ApplyResult =
-  | { kind: "applied"; output: string; warnings?: string[] }
-  | { kind: "dryRun"; diff: string }
+  | { kind: "applied"; output: string; warnings?: string[]; autoAdded?: string[] }
+  | { kind: "dryRun"; diff: string; autoAdded?: string[] }
   | { kind: "rejected"; problems: string[] }
   | { kind: "failed"; output: string };
+function nonEmpty(arr: string[] | undefined): string[] | undefined {
+  return arr !== undefined && arr.length > 0 ? arr : undefined;
+}
 function deriveGroupId(basePackage: string): string {
   const segments = basePackage.split(".");
   return segments.length > 1 ? segments.slice(0, -1).join(".") : basePackage;
@@ -116,9 +131,10 @@ interface FinishOpts {
   basePackage: string | undefined;
   projectName: string | undefined;
   warnings?: string[];
+  autoAdded?: string[];
 }
 function finish(opts: FinishOpts): ApplyResult {
-  if (opts.dryRun) return { kind: "dryRun", diff: opts.out };
+  if (opts.dryRun) return { kind: "dryRun", diff: opts.out, autoAdded: nonEmpty(opts.autoAdded) };
   let seeded = opts.state;
   if (appliedIds(opts.state).length === 0) {
     const name = opts.projectName !== undefined ? opts.projectName : path.basename(opts.targetProject);
@@ -137,9 +153,12 @@ function finish(opts: FinishOpts): ApplyResult {
     });
   }
   saveState(opts.targetProject, updated);
-  return opts.warnings !== undefined && opts.warnings.length > 0
-    ? { kind: "applied", output: opts.out, warnings: opts.warnings }
-    : { kind: "applied", output: opts.out };
+  return {
+    kind: "applied",
+    output: opts.out,
+    warnings: nonEmpty(opts.warnings),
+    autoAdded: nonEmpty(opts.autoAdded),
+  };
 }
 export interface ApplyOpts {
   targetProject: string;
@@ -149,19 +168,26 @@ export interface ApplyOpts {
   basePackage: string | undefined;
   projectName: string | undefined;
   fetchImpl?: FetchLike;
+  pickProvider?: ProviderPicker;
+  preResolved?: Map<string, string>;
 }
 export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const state = loadState(opts.targetProject);
 
+  const pickProvider = opts.pickProvider ?? (async () => undefined);
+  const resolution = await resolveModules(catalog, appliedIds(state), opts.moduleIds, pickProvider, opts.preResolved);
+  if (resolution.problems.length > 0) return { kind: "rejected", problems: resolution.problems };
+  const moduleIds = resolution.moduleIds;
+  const autoAdded = resolution.added;
 
-  const problems = validate(catalog, appliedIds(state), opts.moduleIds);
+  const problems = validate(catalog, appliedIds(state), moduleIds);
   if (problems.length > 0) return { kind: "rejected", problems };
   const tokenState = seedStateForFreshApply(state, opts.basePackage, opts.projectName);
   const projectTokens = projectLevelTokens(tokenState);
   const selections: ModuleSelection[] = [];
   const answersByModule = new Map<string, Record<string, string>>();
-  for (const id of opts.moduleIds) {
+  for (const id of moduleIds) {
     const manifest = catalog.modules.get(id);
     if (manifest === undefined) {
       return { kind: "rejected", problems: [`Unknown module: '${id}'`] };
@@ -174,7 +200,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
   }
   let initializrWarnings: string[] = [];
   if (!opts.dryRun) {
-    for (const id of opts.moduleIds) {
+    for (const id of moduleIds) {
       const manifest = catalog.modules.get(id);
       if (manifest === undefined) continue;
       if (manifest.scaffold) {
@@ -189,7 +215,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
                 artifactId: resolvedProjectName,
                 packageName: resolvedBasePackage,
                 name: resolvedProjectName,
-                dependencies: initializrDependenciesFor(opts.moduleIds),
+                dependencies: initializrDependenciesFor(moduleIds),
               },
               fetchImpl,
             );
@@ -214,13 +240,14 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
       return finish({
         targetProject: opts.targetProject,
         state,
-        moduleIds: opts.moduleIds,
+        moduleIds,
         answersByModule,
         dryRun: opts.dryRun,
         out: "Dry run — no changes written.",
         basePackage: opts.basePackage,
         projectName: opts.projectName,
         warnings: initializrWarnings,
+        autoAdded,
       });
     }
     try {
@@ -231,7 +258,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
     recipeOutput = `Applied ${operations.length} merge operation(s).`;
   }
   if (!opts.dryRun) {
-    for (const id of opts.moduleIds) {
+    for (const id of moduleIds) {
       const manifest = catalog.modules.get(id);
       if (manifest === undefined) continue;
       if (!manifest.scaffold && manifest.fileTemplates.length > 0) {
@@ -247,13 +274,14 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
   return finish({
     targetProject: opts.targetProject,
     state,
-    moduleIds: opts.moduleIds,
+    moduleIds,
     answersByModule,
     dryRun: opts.dryRun,
     out: recipeOutput,
     basePackage: opts.basePackage,
     projectName: opts.projectName,
     warnings: initializrWarnings,
+    autoAdded,
   });
 }
 export type UpgradeResult =
@@ -453,10 +481,14 @@ export async function runAdd(opts: AddOpts): Promise<void> {
     dryRun: opts.dryRun,
     basePackage: undefined,
     projectName: undefined,
+    pickProvider: interactivePickProvider,
   });
   spin?.stop(result.kind === "applied" ? "Applied." : "Done.");
   switch (result.kind) {
     case "applied":
+      if (result.autoAdded !== undefined) {
+        console.log(output.hint(`Also added (to satisfy a dependency): ${result.autoAdded.join(", ")}`));
+      }
       if (result.warnings !== undefined) {
         for (const warning of result.warnings) {
           if (isInteractive()) {
@@ -477,29 +509,89 @@ export async function runAdd(opts: AddOpts): Promise<void> {
       throw new Error(`Merge run failed:\n${result.output}`);
   }
 }
-export const DATABASE_IDS = ["postgres", "mysql", "mariadb", "h2", "none"] as const;
-export const CACHE_PROVIDER_IDS = ["caffeine", "redis"] as const;
-export const CAPABILITY_IDS = [
-  "validation",
-  "migrations",
-  "security",
-  "caching",
-  "aop",
-  "scheduling",
-  "async",
-  "auditing",
-  "observability",
-  "openapi",
-  "testing",
-] as const;
+// Every list below is derived live from the catalog's own requires/provides metadata instead of
+// a hand-maintained literal — adding a module to the catalog makes it show up here (and in the
+// wizard) with zero code changes. The trade-off: these are plain string[] rather than literal
+// tuples, so --database/--capabilities/--cache-provider validate their choices at runtime
+// (Commander's .choices() already does this) rather than via a TS literal union.
+export const DATABASE_IDS: string[] = [
+  ...capabilityProviders(catalog, "capability:relational-db").map((m) => m.id),
+  "none",
+];
+export const CACHE_PROVIDER_IDS: string[] = capabilityProviders(catalog, "capability:caching").map((m) => m.id);
+const CAPABILITY_LABELS: Record<string, string> = {
+  validation: "Validation",
+  migrations: "Database migrations",
+  auth: "Security (JWT)",
+  caching: "Caching",
+  aop: "AOP",
+  scheduling: "Scheduling",
+  async: "Async processing",
+  auditing: "Auditing",
+  tracing: "Observability",
+  "api-docs": "OpenAPI",
+  "integration-testing": "Testing infrastructure",
+};
+function formatCapabilityLabel(value: string): string {
+  return value
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+function capabilityChoices(): { value: string; label: string }[] {
+  const choices: { value: string; label: string }[] = [
+    { value: "validation", label: CAPABILITY_LABELS.validation! },
+    // "migrations" is synthetic: flyway/flyway-mysql provide nothing distinguishable — the
+    // choice between them is purely "which SQL dialect", resolved by resolveMigrationsModule()
+    // once the database is known (asking live if the user picks Migrations before a database).
+    { value: "migrations", label: CAPABILITY_LABELS.migrations! },
+  ];
+  const seen = new Set(["validation"]);
+  for (const m of catalog.modules.values()) {
+    if (m.provides === undefined) continue;
+    if (m.provides === "capability:http-api" || m.provides === "capability:relational-db") continue;
+    const capability = m.provides.replace(/^capability:/, "");
+    if (seen.has(capability)) continue;
+    seen.add(capability);
+    choices.push({ value: capability, label: CAPABILITY_LABELS[capability] ?? formatCapabilityLabel(capability) });
+  }
+  return choices;
+}
+export const CAPABILITY_IDS: string[] = capabilityChoices().map((c) => c.value);
+export function listCapabilities(): void {
+  const rows = capabilityChoices().map((c) => {
+    const requirement = `capability:${c.value}`;
+    const providers = c.value === "migrations" ? ["flyway", "flyway-mysql"] : capabilityProviders(catalog, requirement).map((m) => m.id);
+    return { id: c.value, label: c.label, providers };
+  });
+  const idWidth = widthOf(rows, (r) => r.id);
+  const body = rows
+    .map((r) => {
+      const paddedId = output.accent(pad(r.id, idWidth));
+      return `  ${paddedId}  ${r.label}  provider(s)=${javaList(r.providers)}`;
+    })
+    .join("\n");
+  console.log(`${output.question("Available capabilities (for 'jloom new --capabilities'):")}\n${body}`);
+}
+async function interactivePickProvider(capability: string, candidates: ModuleManifest[]): Promise<string | undefined> {
+  if (!isInteractive()) return undefined;
+  const label = CAPABILITY_LABELS[capability.replace(/^capability:/, "")] ?? formatCapabilityLabel(capability.replace(/^capability:/, ""));
+  return askChoice(
+    undefined,
+    capability,
+    `Which ${label.toLowerCase()}?`,
+    candidates.map((m) => ({ value: m.id, label: m.description ?? formatCapabilityLabel(m.id) })),
+    candidates[0]!.id,
+  );
+}
 export interface NewOptions {
   name?: string;
   service?: string;
   basePackage?: string;
   archetype?: string;
-  database?: (typeof DATABASE_IDS)[number];
-  capabilities?: (typeof CAPABILITY_IDS)[number][];
-  cacheProvider?: (typeof CACHE_PROVIDER_IDS)[number];
+  database?: string;
+  capabilities?: string[];
+  cacheProvider?: string;
   dryRun: boolean;
   quiet: boolean;
   yes?: boolean;
@@ -523,10 +615,16 @@ export async function runNew(options: NewOptions): Promise<void> {
     { value: undefined, label: "Just a base project" },
   ];
   const serviceId = await askOptional(options.service, "What would you like to create?", serviceChoices);
-  let moduleIds =
-    serviceId === undefined
-      ? await buildCapabilityWizard(options.database, options.capabilities, options.cacheProvider)
-      : catalog.services.get(serviceId)!.modules;
+  let moduleIds: string[];
+  let preResolved: Map<string, string>;
+  if (serviceId === undefined) {
+    const wizardResult = await buildCapabilityWizard(options.database, options.capabilities, options.cacheProvider);
+    moduleIds = wizardResult.moduleIds;
+    preResolved = wizardResult.preResolved;
+  } else {
+    moduleIds = catalog.services.get(serviceId)!.modules;
+    preResolved = new Map();
+  }
   let archetypeAnswers: Record<string, string> = {};
   if (options.archetype !== undefined) {
     const manifest = catalog.archetypes.get(options.archetype);
@@ -568,10 +666,20 @@ export async function runNew(options: NewOptions): Promise<void> {
     dryRun: options.dryRun,
     basePackage: resolvedBasePackage,
     projectName: path.basename(target),
+    pickProvider: interactivePickProvider,
+    preResolved,
   });
   spin?.stop("Done.");
   switch (result.kind) {
     case "applied":
+      if (result.autoAdded !== undefined) {
+        const line = `Also added (to satisfy a dependency): ${result.autoAdded.join(", ")}`;
+        if (interactiveWizard) {
+          clack.log.info(line);
+        } else {
+          console.log(output.hint(line));
+        }
+      }
       if (result.warnings !== undefined) {
         for (const warning of result.warnings) {
           if (interactiveWizard) {
@@ -623,101 +731,82 @@ function suggestProjectName(): string {
   }
   return DEFAULT_PROJECT_NAME;
 }
+interface CapabilityWizardResult {
+  moduleIds: string[];
+  preResolved: Map<string, string>;
+}
+// Fully catalog-driven: the Database question and the Capabilities multiselect both read their
+// choices from the catalog's own `provides` metadata (via capabilityChoices()/
+// capabilityProviders()) instead of a hardcoded switch statement — a new module in the catalog
+// shows up here with zero code changes. Picking a capability that needs a database before one's
+// chosen (Migrations, or any future capability requiring capability:relational-db) triggers a
+// live follow-up question instead of being hidden until a database is picked first.
 async function buildCapabilityWizard(
   database: string | undefined,
   capabilities: string[] | undefined,
   cacheProvider: string | undefined,
-): Promise<string[]> {
+): Promise<CapabilityWizardResult> {
   const moduleIds: string[] = ["base"];
-  const databaseModule = await resolveDatabase(database);
-  if (databaseModule !== undefined) moduleIds.push(databaseModule);
-  const capabilityIds = await resolveCapabilityIds(capabilities, databaseModule);
-  const cacheModule = capabilityIds.includes("caching")
-    ? await resolveCacheProvider(cacheProvider)
-    : undefined;
+  const preResolved = new Map<string, string>();
+
+  let databaseModule = await resolveDatabase(database);
+  if (databaseModule !== undefined) {
+    moduleIds.push(databaseModule);
+    preResolved.set("capability:relational-db", databaseModule);
+  }
+
+  const capabilityIds = await resolveCapabilityIds(capabilities);
+
+  if (capabilityIds.includes("migrations") && databaseModule === undefined) {
+    const providers = capabilityProviders(catalog, "capability:relational-db");
+    databaseModule = await interactivePickProvider("capability:relational-db", providers);
+    if (databaseModule !== undefined) {
+      moduleIds.push(databaseModule);
+      preResolved.set("capability:relational-db", databaseModule);
+    }
+  }
+
   for (const capability of capabilityIds) {
-    moduleIds.push(CAPABILITY_TO_MODULE(capability, databaseModule, cacheModule));
+    if (capability === "migrations") {
+      if (databaseModule !== undefined) moduleIds.push(resolveMigrationsModule(databaseModule));
+      continue;
+    }
+    const requirement = `capability:${capability}`;
+    const providers = capabilityProviders(catalog, requirement);
+    if (providers.length === 0) continue;
+    if (providers.length === 1) {
+      moduleIds.push(providers[0]!.id);
+      continue;
+    }
+    const preseeded = capability === "caching" && cacheProvider !== undefined ? cacheProvider : undefined;
+    const chosen = preseeded ?? (await interactivePickProvider(requirement, providers));
+    if (chosen !== undefined) {
+      preResolved.set(requirement, chosen);
+      moduleIds.push(chosen);
+    }
   }
-  return moduleIds;
+
+  return { moduleIds, preResolved };
 }
-const CAPABILITY_TO_MODULE = (capability: string, databaseModule: string | undefined, cacheModule: string | undefined): string => {
-  switch (capability) {
-    case "validation":
-      return "validation";
-    case "migrations":
-      return databaseModule === "mysql" || databaseModule === "mariadb" ? "flyway-mysql" : "flyway";
-    case "security":
-      return "jwt-auth";
-    case "caching":
-      return cacheModule!;
-    case "aop":
-      return "aop";
-    case "scheduling":
-      return "scheduling";
-    case "async":
-      return "async";
-    case "auditing":
-      return "auditing";
-    case "observability":
-      return "otel-tracing";
-    case "openapi":
-      return "openapi";
-    case "testing":
-      return "testcontainers";
-    default:
-      throw new Error(`Unknown capability '${capability}' — expected one of: ${CAPABILITY_IDS.join(", ")}`);
-  }
-};
-
-
-
-
-
+// flyway/flyway-mysql both require capability:relational-db and provide nothing
+// distinguishable — the split between them is purely "which SQL dialect", not expressible as a
+// simple capability match, so it's kept as one small, explicit special case rather than forced
+// through the generic multi-provider mechanism (which would mean asking the user twice: once
+// for the database, once for "which migration flavor for that same database" — redundant).
+function resolveMigrationsModule(databaseModuleId: string): string {
+  return databaseModuleId === "mysql" || databaseModuleId === "mariadb" ? "flyway-mysql" : "flyway";
+}
 
 async function resolveDatabase(database: string | undefined): Promise<string | undefined> {
   if (database === "none") return undefined;
   if (database !== undefined) return database;
+  const providers = capabilityProviders(catalog, "capability:relational-db");
   return askOptional(undefined, "Database", [
-    { value: "postgres", label: "PostgreSQL" },
-    { value: "mysql", label: "MySQL" },
-    { value: "mariadb", label: "MariaDB" },
-    { value: "h2", label: "H2 (in-memory — dev/test only)" },
+    ...providers.map((m) => ({ value: m.id, label: m.description ?? formatCapabilityLabel(m.id) })),
     { value: undefined, label: "None" },
   ]);
 }
-async function resolveCapabilityIds(
-  capabilities: string[] | undefined,
-  databaseModule: string | undefined,
-): Promise<string[]> {
+async function resolveCapabilityIds(capabilities: string[] | undefined): Promise<string[]> {
   if (capabilities !== undefined) return capabilities;
-  const choices: { value: string; label: string }[] = [{ value: "validation", label: "Validation" }];
-  if (databaseModule !== undefined) choices.push({ value: "migrations", label: "Database migrations" });
-  choices.push(
-    { value: "security", label: "Security (JWT)" },
-    { value: "caching", label: "Caching" },
-    { value: "aop", label: "AOP" },
-    { value: "scheduling", label: "Scheduling" },
-    { value: "async", label: "Async processing" },
-  );
-  if (databaseModule !== undefined) choices.push({ value: "auditing", label: "Auditing" });
-  choices.push(
-    { value: "observability", label: "Observability" },
-    { value: "openapi", label: "OpenAPI" },
-  );
-  if (databaseModule !== undefined) choices.push({ value: "testing", label: "Testing infrastructure" });
-  return askMultiple("Capabilities", choices);
-}
-async function resolveCacheProvider(cacheProvider: string | undefined): Promise<string> {
-  if (cacheProvider !== undefined) return cacheProvider === "redis" ? "caching-redis" : "caching-caffeine";
-  if (!isInteractive()) return "caching-caffeine";
-  return askChoice(
-    undefined,
-    "cache-provider",
-    "Cache provider",
-    [
-      { value: "caching-caffeine", label: "Caffeine (in-process, no external service)" },
-      { value: "caching-redis", label: "Redis" },
-    ],
-    "caching-caffeine",
-  );
+  return askMultiple("Capabilities", capabilityChoices());
 }
