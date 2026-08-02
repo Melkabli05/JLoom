@@ -4,9 +4,13 @@
 # dependency it needs (Initializr's own catalog has no ArchUnit entry), and a starting
 # domain/application/infrastructure/presentation package skeleton (via package-info.java, since
 # git can't track empty directories) matching the layered convention every catalog service
-# already follows nested under its own feature package.
+# already follows nested under its own feature package. The sub-packages below (domain/model,
+# application/service, infrastructure/persistence, infrastructure/configuration,
+# presentation/controller, presentation/dto, presentation/mapper) mirror exactly what
+# user-service/notification-service/file-service already use — folders only, no sample code, so
+# a new feature has every conventional home ready without the user first deciding on layout.
 id: base
-version: 2.1.0
+version: 2.2.0
 requires: []
 conflicts: []
 prompts: []
@@ -17,6 +21,13 @@ scaffold: true
 fileTemplates:
   - src/test/java/{{package_path}}/ArchitectureTest.java
   - src/main/java/{{package_path}}/domain/package-info.java
+  - src/main/java/{{package_path}}/domain/model/package-info.java
   - src/main/java/{{package_path}}/application/package-info.java
+  - src/main/java/{{package_path}}/application/service/package-info.java
   - src/main/java/{{package_path}}/infrastructure/package-info.java
+  - src/main/java/{{package_path}}/infrastructure/persistence/package-info.java
+  - src/main/java/{{package_path}}/infrastructure/configuration/package-info.java
   - src/main/java/{{package_path}}/presentation/package-info.java
+  - src/main/java/{{package_path}}/presentation/controller/package-info.java
+  - src/main/java/{{package_path}}/presentation/dto/package-info.java
+  - src/main/java/{{package_path}}/presentation/mapper/package-info.java
