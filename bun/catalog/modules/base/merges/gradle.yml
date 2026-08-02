@@ -1,0 +1,7 @@
+# ArchUnit isn't in Spring Initializr's dependency catalog, so it's added the same way any
+# other module adds a dependency to an already-generated build.gradle.kts.
+- org.openrewrite.gradle.AddDependency:
+    groupId: com.tngtech.archunit
+    artifactId: archunit-junit5
+    version: 1.4.1
+    configuration: testImplementation

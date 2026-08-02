@@ -1,4 +1,5 @@
 import path from "node:path";
+import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "../initializr.ts";
 import { applyOperations } from "../merge/executor.ts";
 import { compose } from "../merge/recipeComposer.ts";
 import type { ModuleSelection } from "../merge/recipeComposer.ts";
@@ -66,6 +67,11 @@ function projectLevelTokens(state: ProjectState): Record<string, string> {
   return tokens;
 }
 
+function deriveGroupId(basePackage: string): string {
+  const segments = basePackage.split(".");
+  return segments.length > 1 ? segments.slice(0, -1).join(".") : basePackage;
+}
+
 function finish(
   registry: ModuleRegistry,
   targetProject: string,
@@ -110,7 +116,7 @@ function finish(
  * message regardless) - so dropping OpenRewrite loses no user-visible behavior here. This
  * version still calls compose(...) during a dry run (cheap, in-memory) so a malformed merge
  * fragment is still caught early, but never touches disk when dryRun is true. */
-export function apply(
+export async function apply(
   registry: ModuleRegistry,
   targetProject: string,
   moduleIds: string[],
@@ -118,7 +124,8 @@ export function apply(
   dryRun: boolean,
   basePackage: string | undefined,
   projectName: string | undefined,
-): ApplyResult {
+  fetchImpl: FetchLike = fetch,
+): Promise<ApplyResult> {
   const state = loadState(targetProject);
 
   const problems = registry.validate(appliedIds(state), moduleIds);
@@ -145,6 +152,29 @@ export function apply(
     for (const id of moduleIds) {
       const manifest = registry.require(id);
       if (manifest.scaffold) {
+        // "base" scaffolds via a real Spring Initializr call instead of jloom's own static
+        // file templates - see initializr.ts. Any remaining fileTemplates the module still
+        // declares (e.g. ArchitectureTest.java, which Initializr has no notion of) are still
+        // copied on top, same as before.
+        if (manifest.id === "base") {
+          const resolvedBasePackage = tokenState.basePackage ?? "com.example.app";
+          const resolvedProjectName = tokenState.projectName ?? path.basename(targetProject);
+          try {
+            await generateSpringBootProject(
+              targetProject,
+              {
+                groupId: deriveGroupId(resolvedBasePackage),
+                artifactId: resolvedProjectName,
+                packageName: resolvedBasePackage,
+                name: resolvedProjectName,
+                dependencies: initializrDependenciesFor(moduleIds),
+              },
+              fetchImpl,
+            );
+          } catch (err) {
+            return { kind: "failed", output: err instanceof Error ? err.message : String(err) };
+          }
+        }
         const fileTokens = { ...projectTokens, ...answersByModule.get(id) };
         copy(manifest, targetProject, fileTokens);
       }

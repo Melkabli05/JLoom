@@ -14,11 +14,21 @@ function tempDir(): string {
   return mkdtempSync(path.join(os.tmpdir(), "jloom-apply-"));
 }
 
-test("dry run on a brand-new project writes nothing to disk", () => {
+// A real Spring Initializr response recorded once (test/fixtures/initializr-sample.tgz) so
+// these tests never make a live network call - the fake fetch below always returns it,
+// regardless of the requested URL. That means the *generated file layout* it produces is
+// fixed (com/example/demo/DemoApplication.java) no matter what basePackage/projectName a test
+// passes to apply() - state.json seeding is independent of that and still reflects the real
+// arguments. Actually calling the live service end to end is covered separately (Phase 4).
+const fixturePath = path.join(import.meta.dirname, "fixtures", "initializr-sample.tgz");
+const fakeFetch = async (): Promise<Response> =>
+  new Response(readFileSync(fixturePath), { status: 200, statusText: "OK" });
+
+test("dry run on a brand-new project writes nothing to disk", async () => {
   const dir = tempDir();
   try {
     const target = path.join(dir, "my-app");
-    const result = apply(registry, target, ["base"], {}, true, "com.acme.demo", "my-app");
+    const result = await apply(registry, target, ["base"], {}, true, "com.acme.demo", "my-app", fakeFetch);
 
     assert.strictEqual(result.kind, "dryRun");
     assert.strictEqual(existsSync(path.join(target, ".jloom", "state.json")), false);
@@ -28,11 +38,11 @@ test("dry run on a brand-new project writes nothing to disk", () => {
   }
 });
 
-test("rejection leaves no state file on disk", () => {
+test("rejection leaves no state file on disk", async () => {
   const dir = tempDir();
   try {
     const target = path.join(dir, "half-baked");
-    const result = apply(registry, target, ["not-a-real-module"], {}, false, "com.acme.demo", "half-baked");
+    const result = await apply(registry, target, ["not-a-real-module"], {}, false, "com.acme.demo", "half-baked", fakeFetch);
 
     assert.strictEqual(result.kind, "rejected");
     assert.strictEqual(existsSync(path.join(target, ".jloom", "state.json")), false);
@@ -44,17 +54,24 @@ test("rejection leaves no state file on disk", () => {
 // The following exercise the actual merge-into-real-files path end to end - coverage the Java
 // suite never had in isolation, since it only ever reached this transitively through a real
 // Gradle+OpenRewrite subprocess (network-dependent, ~seconds per test). Here it's in-process
-// and needs no subprocess or network at all.
+// (aside from the scaffold step, which uses the recorded fixture above) and needs no live
+// network or subprocess.
 
-test("applying base scaffolds a real project directory", () => {
+test("applying base scaffolds a real project directory via Initializr, plus jloom's own ArchitectureTest", async () => {
   const dir = tempDir();
   try {
     const target = path.join(dir, "my-app");
-    const result = apply(registry, target, ["base"], {}, false, "com.acme.demo", "my-app");
+    const result = await apply(registry, target, ["base"], {}, false, "com.acme.demo", "my-app", fakeFetch);
 
     assert.strictEqual(result.kind, "applied");
     assert.ok(existsSync(path.join(target, "build.gradle.kts")));
-    assert.ok(existsSync(path.join(target, "src/main/java/com/acme/demo/Application.java")));
+    // The fixture's own fixed package layout (see comment above) - real parameterization by
+    // groupId/artifactId/packageName is verified in initializr.test.ts and Phase 4's live check.
+    assert.ok(existsSync(path.join(target, "src/main/java/com/example/demo/DemoApplication.java")));
+    assert.ok(existsSync(path.join(target, "src/test/java/com/acme/demo/ArchitectureTest.java")));
+
+    const buildFile = readFileSync(path.join(target, "build.gradle.kts"), "utf8");
+    assert.ok(buildFile.includes("com.tngtech.archunit:archunit-junit5"));
 
     const state = loadState(target);
     assert.strictEqual(state.projectName, "my-app");
@@ -65,13 +82,13 @@ test("applying base scaffolds a real project directory", () => {
   }
 });
 
-test("applying postgres after base merges the dependency and datasource config", () => {
+test("applying postgres after base merges the dependency and datasource config", async () => {
   const dir = tempDir();
   try {
     const target = path.join(dir, "my-app");
-    apply(registry, target, ["base"], {}, false, "com.acme.demo", "my-app");
+    await apply(registry, target, ["base"], {}, false, "com.acme.demo", "my-app", fakeFetch);
 
-    const result = apply(registry, target, ["postgres"], { "postgres.db_name": "demo" }, false, undefined, undefined);
+    const result = await apply(registry, target, ["postgres"], { "postgres.db_name": "demo" }, false, undefined, undefined, fakeFetch);
     assert.strictEqual(result.kind, "applied");
 
     const buildFile = readFileSync(path.join(target, "build.gradle.kts"), "utf8");

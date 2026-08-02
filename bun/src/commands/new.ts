@@ -77,7 +77,7 @@ export async function runNew(ctx: JloomContext, io: ReplIo, options: NewOptions)
     console.log(`${options.dryRun ? "Previewing " : "Setting up "}${output.accent(target)}...`);
   }
 
-  const result = apply(
+  const result = await apply(
     ctx.modules,
     target,
     moduleIds,

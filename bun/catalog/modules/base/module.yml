@@ -1,23 +1,15 @@
-# base — the minimal Spring Boot 4 / Java 25 project skeleton.
-# Special-cased by NewCommand: it's the one module applied via plain file copy rather than
-# OpenRewrite, because until it exists there's no ./gradlew for OpenRewrite to run through.
+# base — scaffolds the project via a real Spring Initializr call (see src/initializr.ts)
+# rather than jloom's own hand-maintained skeleton templates. Only what Initializr doesn't
+# know how to generate remains here: the ArchUnit layering-rules test file, and the
+# archunit-junit5 dependency it needs (Initializr's own catalog has no ArchUnit entry).
 id: base
-version: 1.0.0
+version: 2.0.0
 requires: []
 conflicts: []
 prompts: []
 provides: capability:http-api
-mergeRecipes: []
+mergeRecipes:
+  - merges/gradle.yml
 scaffold: true
 fileTemplates:
-  - settings.gradle.kts
-  - build.gradle.kts
-  - gradlew
-  - gradlew.bat
-  - gradle/wrapper/gradle-wrapper.properties
-  - gradle/wrapper/gradle-wrapper.jar
-  - src/main/java/{{package_path}}/Application.java
-  - src/main/resources/application.yml
   - src/test/java/{{package_path}}/ArchitectureTest.java
-  - .gitignore
-  - README.md

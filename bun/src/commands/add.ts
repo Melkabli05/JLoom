@@ -30,7 +30,7 @@ export interface AddOptions {
 
 export async function runAdd(ctx: JloomContext, io: ReplIo, options: AddOptions): Promise<void> {
   const ids = await resolveModuleIds(io, options.moduleIds);
-  const result = apply(ctx.modules, path.resolve(options.project), ids, options.set, options.dryRun, undefined, undefined);
+  const result = await apply(ctx.modules, path.resolve(options.project), ids, options.set, options.dryRun, undefined, undefined);
 
   switch (result.kind) {
     case "applied":
