@@ -12,15 +12,18 @@ public class InfoCmd extends CliCommand implements Runnable {
     @ParentCommand
     JloomCommand parent;
 
-    @Option(names = "--module", description = "Module id, e.g. 'postgres'", required = true)
+    @Option(names = "--module", description = "Module id, e.g. 'postgres'")
     String moduleId;
 
     @Override
     public void run() {
-        ModuleRegistry modules = parent.context().modules();
-        ModuleManifest mod = modules.find(moduleId)
+        JloomContext ctx = parent.context();
+        ModuleRegistry modules = ctx.modules();
+        String id = ctx.prompts().requireNonBlankText(moduleId, "module",
+                "Which module? (see 'jloom list' for ids)");
+        ModuleManifest mod = modules.find(id)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "No such module: '" + moduleId + "'. Run 'jloom list' to see available modules."));
+                        "No such module: '" + id + "'. Run 'jloom list' to see available modules."));
 
         StringBuilder out = new StringBuilder();
         out.append(mod.id()).append(' ').append(mod.version()).append('\n');

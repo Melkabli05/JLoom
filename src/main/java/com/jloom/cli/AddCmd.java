@@ -20,7 +20,7 @@ public class AddCmd extends CliCommand implements Runnable {
     @Option(names = "--project", defaultValue = ".", description = "Target project directory.")
     String project;
 
-    @Parameters(arity = "1..*", description = "Module ids to add.")
+    @Parameters(arity = "0..*", description = "Module ids to add.")
     List<String> moduleIds;
 
     @Option(names = "--set", description = "Override module prompts, e.g. --set postgres.db_name=demo,postgres.port=5433")
@@ -31,14 +31,28 @@ public class AddCmd extends CliCommand implements Runnable {
 
     @Override
     public void run() {
-        ModuleApplier applier = parent.context().applier();
-        ApplyResult result = applier.apply(Path.of(project), moduleIds, set == null ? Map.of() : set, dryRun, null, null);
+        JloomContext ctx = parent.context();
+        List<String> ids = resolveModuleIds(ctx);
+        ModuleApplier applier = ctx.applier();
+        ApplyResult result = applier.apply(Path.of(project), ids, set == null ? Map.of() : set, dryRun, null, null);
         switch (result) {
-            case ApplyResult.Applied ignored -> System.out.println(JloomOutput.success("Applied: " + moduleIds));
+            case ApplyResult.Applied ignored -> System.out.println(JloomOutput.success("Applied: " + ids));
             case ApplyResult.DryRun ignored -> System.out.println("Dry run — no changes written.");
             case ApplyResult.Rejected rejected -> throw new IllegalArgumentException(formatProblems(rejected.problems()));
             case ApplyResult.Failed f -> throw new IllegalStateException("OpenRewrite run failed:\n" + f.output());
         }
+    }
+
+    private List<String> resolveModuleIds(JloomContext ctx) {
+        if (moduleIds != null && !moduleIds.isEmpty()) {
+            return moduleIds;
+        }
+        String typed = ctx.prompts().requireNonBlankText(null, "modules",
+                "Which modules? (comma or space separated ids, see 'jloom list')");
+        return java.util.Arrays.stream(typed.split("[,\\s]+"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     private static String formatProblems(List<String> problems) {

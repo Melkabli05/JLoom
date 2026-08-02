@@ -39,6 +39,27 @@ public class JloomPrompts {
         return line.isBlank() ? defaultValue : line.trim();
     }
 
+    public String requireNonBlankText(String provided, String promptLabel, String prompt) {
+        if (provided != null && !provided.isBlank()) {
+            return provided;
+        }
+        if (!isInteractive()) {
+            throw new IllegalArgumentException("--" + promptLabel + " is required (no interactive terminal to prompt on)");
+        }
+        System.out.println(prompt);
+        while (true) {
+            String line;
+            try {
+                line = reader.readLine(promptLabel + ": ");
+            } catch (EndOfFileException | UserInterruptException e) {
+                throw new IllegalArgumentException("--" + promptLabel + " is required");
+            }
+            if (!line.isBlank()) {
+                return line.trim();
+            }
+        }
+    }
+
     public String promptWithDefault(String provided, String promptLabel, String prompt, String defaultValue) {
         if (provided != null && !provided.isBlank()) {
             return provided;
