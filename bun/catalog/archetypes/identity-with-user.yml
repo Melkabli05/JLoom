@@ -6,6 +6,12 @@
 # published JWKS — identity-service overrides jwt-auth's generic external jwk-set-uri default to
 # self-reference its own /.well-known/jwks.json (see identity-service's own application-yml
 # merge), since both services run in this one bundled project.
+#
+# user_service_base_url is a literal http://localhost:8080, not a ${server.port} placeholder: no
+# module in the catalog ever writes a `server.port` key to application.yml (Boot's default port
+# is applied internally, never published back as a resolvable property), so ${server.port} can
+# never resolve and would fail the app at startup with a PlaceholderResolutionException —
+# confirmed live. 8080 is Spring Boot's actual default when server.port is unset.
 modules:
   - postgres
   - flyway
@@ -17,4 +23,4 @@ modules:
   - user-service
 answers:
   postgres.db_name: app
-  identity-service.user_service_base_url: "http://localhost:${server.port}"
+  identity-service.user_service_base_url: "http://localhost:8080"
