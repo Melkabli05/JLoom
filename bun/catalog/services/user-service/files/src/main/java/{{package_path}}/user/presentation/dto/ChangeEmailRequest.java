@@ -7,4 +7,8 @@ public record ChangeEmailRequest(
         @NotBlank @Email @Size(max = 255) String newEmail,
         @NotBlank String currentPassword
 ) {
+    @Override
+    public String toString() {
+        return "ChangeEmailRequest[newEmail=" + newEmail + ", currentPassword=REDACTED]";
+    }
 }

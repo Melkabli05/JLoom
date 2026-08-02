@@ -6,4 +6,8 @@ public record VerifyCredentialsRequest(
         @NotBlank @Email String email,
         @NotBlank String password
 ) {
+    @Override
+    public String toString() {
+        return "VerifyCredentialsRequest[email=" + email + ", password=REDACTED]";
+    }
 }
