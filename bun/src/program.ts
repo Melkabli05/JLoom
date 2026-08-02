@@ -11,7 +11,6 @@ import {
   runStatus,
   upgrade,
 } from "./apply.ts";
-import { output } from "./wizard.ts";
 
 function parseSetFlag(value: string, previous: Record<string, string>): Record<string, string> {
   const result = { ...previous };
@@ -22,14 +21,9 @@ function parseSetFlag(value: string, previous: Record<string, string>): Record<s
   return result;
 }
 
-/** Builds the Commander command tree. Both `cli.ts` (one-shot) and `repl.ts` (interactive)
- * call this and re-use the same `Command` instance across invocations. The single
- * source of truth for option flags, help text, and exit handling.
- *
- * `exitOverride()` prevents Commander from `process.exit`-ing on parse errors, help, or
- * version display - we catch `CommanderError` ourselves at the call sites so the REPL can
- * stay alive on bad input. `showHelpAfterError()` prints the full help text on a parse
- * error, which is what users expect by default. */
+// exitOverride prevents Commander from process.exit-ing on parse errors, help, or version
+// display - cli.ts and repl.ts catch CommanderError themselves so the REPL stays alive. showHelp
+// AfterError prints the full help text on a parse error, which is what users expect by default.
 export function buildProgram(io: ReplIo): Command {
   const program = new Command();
   program

@@ -1,10 +1,7 @@
 import yaml from "js-yaml";
-import { existsSync, globSync, readFileSync, writeFileSync } from "node:fs";
-import { mkdirSync } from "node:fs";
+import { existsSync, globSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { readText, type ModuleManifest } from "./catalog.ts";
-
-// ===== Operations (the entire "what we do to files" surface) =====
 
 export type MergeOp =
   | { kind: "AddDependency"; groupId: string; artifactId: string; version?: string; configuration: string }
@@ -12,15 +9,11 @@ export type MergeOp =
   | { kind: "ChangePropertyKey"; oldPropertyKey: string; newPropertyKey: string; filePattern: string }
   | { kind: "CreateTextFile"; relativeFileName: string; fileContents: string; overwriteExisting: boolean };
 
-// ===== Token substitution (the {{key}} token -> value primitive) =====
-
 export function substitute(text: string, tokens: Record<string, string>): string {
   let out = text;
   for (const [k, v] of Object.entries(tokens)) out = out.split(`{{${k}}}`).join(v);
   return out;
 }
-
-// ===== Compose: read fragment YAML, substitute tokens, parse to MergeOp[] =====
 
 export interface ModuleSelection {
   manifest: ModuleManifest;
@@ -125,8 +118,6 @@ function parseOperation(moduleId: string, resourcePath: string, entry: unknown):
   }
 }
 
-// ===== applyOps: single dispatch over MergeOp[] =====
-
 export function applyOperations(root: string, ops: MergeOp[]): void {
   for (const op of ops) {
     switch (op.kind) {
@@ -146,8 +137,6 @@ export function applyOperations(root: string, ops: MergeOp[]): void {
   }
 }
 
-// ===== 4 apply helpers + JsonPath-lite + token substitution =====
-
 const DEPENDENCIES_BLOCK = /dependencies\s*\{/;
 
 function applyAddDep(root: string, op: { groupId: string; artifactId: string; version?: string; configuration: string }): void {
@@ -155,9 +144,7 @@ function applyAddDep(root: string, op: { groupId: string; artifactId: string; ve
   const content = readFileSync(buildFile, "utf8");
   const coordinate = `${op.groupId}:${op.artifactId}`;
   const configuredCoordinate = `${op.configuration}("${coordinate}`;
-  if (content.includes(configuredCoordinate)) {
-    return;
-  }
+  if (content.includes(configuredCoordinate)) return;
   const match = content.match(DEPENDENCIES_BLOCK);
   if (match === null || match.index === undefined) {
     throw new Error("Could not find a 'dependencies {' block to insert into");
@@ -171,9 +158,7 @@ function applyAddDep(root: string, op: { groupId: string; artifactId: string; ve
 function findBuildFile(root: string): string {
   for (const candidate of ["build.gradle.kts", "build.gradle"]) {
     const full = path.join(root, candidate);
-    if (existsSync(full)) {
-      return full;
-    }
+    if (existsSync(full)) return full;
   }
   throw new Error(`No build.gradle.kts or build.gradle found under ${root}`);
 }

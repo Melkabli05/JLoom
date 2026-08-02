@@ -2,20 +2,16 @@ import yaml from "js-yaml";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-// ===== Catalog location =====
-
 const ROOTS = ["modules", "services"];
 
+// In a compiled standalone binary (bun build --compile), process.execPath is the binary's
+// path and the catalog sits next to it (copied by the `compile` npm script). In dev
+// runtime mode, process.execPath is the Bun runtime, so fall back to import.meta.dirname.
 function findCatalogRoot(): string {
-  // In a compiled standalone binary (bun build --compile), process.execPath is the binary's
-  // path and the catalog sits next to it (copied by the `compile` npm script). In dev
-  // runtime mode, process.execPath is the Bun runtime, so we fall back to walking up from
-  // the source file via import.meta.dirname.
-  if (process.execPath && !process.execPath.endsWith("bun") && !process.execPath.endsWith("/bun")) {
+  const isCompiled = process.execPath && !process.execPath.endsWith("bun") && !process.execPath.endsWith("/bun");
+  if (isCompiled) {
     const besideBinary = path.join(path.dirname(process.execPath), "catalog");
-    if (existsSync(besideBinary)) {
-      return besideBinary;
-    }
+    if (existsSync(besideBinary)) return besideBinary;
   }
   return path.join(import.meta.dirname, "..", "catalog");
 }
@@ -25,9 +21,7 @@ export const CATALOG_ROOT = findCatalogRoot();
 export function resolvePath(id: string, relativePath: string): string | undefined {
   for (const root of ROOTS) {
     const candidate = path.join(CATALOG_ROOT, root, id, relativePath);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
+    if (existsSync(candidate)) return candidate;
   }
   return undefined;
 }
@@ -45,8 +39,6 @@ export function readBytes(id: string, relativePath: string): Buffer | undefined 
 export function catalogRoot(): string {
   return CATALOG_ROOT;
 }
-
-// ===== Manifest types =====
 
 export interface Prompt {
   key: string;
@@ -87,8 +79,6 @@ export interface ArchetypeManifest {
 }
 
 export class ManifestParseError extends Error {}
-
-// ===== Manifest parsing (private helpers) =====
 
 function requireString(raw: Record<string, unknown>, key: string): string {
   const value = raw[key];
@@ -156,8 +146,6 @@ function parseModuleManifest(raw: unknown): ModuleManifest {
   return { id, version, requires, conflicts, provides, prompts, mergeRecipes, fileTemplates, upgrades, scaffold };
 }
 
-// ===== The single Catalog object: 3 maps + a few helpers =====
-
 export interface Catalog {
   modules: Map<string, ModuleManifest>;
   services: Map<string, ServiceManifest>;
@@ -169,15 +157,13 @@ function loadIndexModules(): Map<string, ModuleManifest> {
   for (const root of ROOTS) {
     const indexPath = path.join(CATALOG_ROOT, root, "modules.yml");
     if (!existsSync(indexPath)) continue;
-    const index = yaml.load(readFileSync(indexPath, "utf8")) as { modules?: string[] } | undefined;
-    const ids = index?.modules ?? [];
+    const ids = (yaml.load(readFileSync(indexPath, "utf8")) as { modules?: string[] } | undefined)?.modules ?? [];
     for (const id of ids) {
       const manifestPath = resolvePath(id, "module.yml");
       if (manifestPath === undefined) {
         throw new Error(`Listed in ${indexPath} but missing manifest for: ${id}`);
       }
-      const raw = yaml.load(readFileSync(manifestPath, "utf8"));
-      const manifest = parseModuleManifest(raw);
+      const manifest = parseModuleManifest(yaml.load(readFileSync(manifestPath, "utf8")));
       if (manifest.id !== id) {
         throw new Error(`${indexPath} lists id '${id}' but manifest declares id '${manifest.id}'`);
       }
@@ -191,11 +177,10 @@ function loadIndexModules(): Map<string, ModuleManifest> {
 }
 
 function loadServices(): Map<string, ServiceManifest> {
-  const indexPath = path.join(CATALOG_ROOT, "services.yml");
   const byId = new Map<string, ServiceManifest>();
+  const indexPath = path.join(CATALOG_ROOT, "services.yml");
   if (!existsSync(indexPath)) return byId;
-  const root = yaml.load(readFileSync(indexPath, "utf8")) as { services?: unknown[] } | undefined;
-  const list = root?.services;
+  const list = (yaml.load(readFileSync(indexPath, "utf8")) as { services?: unknown[] } | undefined)?.services;
   if (!Array.isArray(list)) return byId;
   for (const item of list) {
     if (item !== null && typeof item === "object") {
@@ -213,12 +198,11 @@ function loadServices(): Map<string, ServiceManifest> {
 }
 
 function loadArchetypes(): Map<string, ArchetypeManifest> {
+  const byId = new Map<string, ArchetypeManifest>();
   const dir = path.join(CATALOG_ROOT, "archetypes");
   const indexPath = path.join(dir, "archetypes.yml");
-  const byId = new Map<string, ArchetypeManifest>();
   if (!existsSync(indexPath)) return byId;
-  const index = yaml.load(readFileSync(indexPath, "utf8")) as { archetypes?: string[] } | undefined;
-  const ids = index?.archetypes ?? [];
+  const ids = (yaml.load(readFileSync(indexPath, "utf8")) as { archetypes?: string[] } | undefined)?.archetypes ?? [];
   for (const id of ids) {
     const filePath = path.join(dir, `${id}.yml`);
     if (!existsSync(filePath)) {
@@ -233,11 +217,7 @@ function loadArchetypes(): Map<string, ArchetypeManifest> {
         answers[key] = String(value);
       }
     }
-    byId.set(id, {
-      id,
-      modules: raw?.modules ?? [],
-      answers,
-    });
+    byId.set(id, { id, modules: raw?.modules ?? [], answers });
   }
   return byId;
 }
@@ -251,8 +231,6 @@ export function loadCatalog(): Catalog {
 }
 
 export const catalog = loadCatalog();
-
-// ===== Inline helpers (formerly Registry class methods) =====
 
 export function findUpgradePath(catalog: Catalog, moduleId: string, fromVersion: string): Upgrade[] {
   const manifest = catalog.modules.get(moduleId);
@@ -276,7 +254,6 @@ export function findUpgradePath(catalog: Catalog, moduleId: string, fromVersion:
 
 export function validate(catalog: Catalog, alreadyApplied: string[], toApply: string[]): string[] {
   const problems: string[] = [];
-
   for (let i = 0; i < toApply.length; i++) {
     const id = toApply[i]!;
     const manifest = catalog.modules.get(id);
@@ -284,21 +261,17 @@ export function validate(catalog: Catalog, alreadyApplied: string[], toApply: st
       problems.push(`Unknown module: ${id}`);
       continue;
     }
-
     const satisfiedSoFar = [...alreadyApplied, ...toApply.slice(0, i)];
     for (const required of manifest.requires) {
       if (!isSatisfied(catalog, required, satisfiedSoFar)) {
         const satisfiedLaterInBatch = isSatisfied(catalog, required, toApply.slice(i + 1));
-        if (satisfiedLaterInBatch) {
-          problems.push(
-            `${id} requires '${required}' which is in this request but listed AFTER ${id} — list it earlier, e.g.: jloom add <provider>,${id}`,
-          );
-        } else {
-          problems.push(`${id} requires '${required}' which is not applied and not being applied now`);
-        }
+        problems.push(
+          satisfiedLaterInBatch
+            ? `${id} requires '${required}' which is in this request but listed AFTER ${id} — list it earlier, e.g.: jloom add <provider>,${id}`
+            : `${id} requires '${required}' which is not applied and not being applied now`,
+        );
       }
     }
-
     const effective = [...alreadyApplied, ...toApply];
     for (const conflict of manifest.conflicts) {
       if (effective.includes(conflict)) {
@@ -306,7 +279,6 @@ export function validate(catalog: Catalog, alreadyApplied: string[], toApply: st
       }
     }
   }
-
   return problems;
 }
 

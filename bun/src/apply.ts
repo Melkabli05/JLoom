@@ -20,8 +20,6 @@ const DEFAULT_PROJECT_NAME = "my-app";
 const DEFAULT_BASE_PACKAGE = "com.example.app";
 const BASE_PACKAGE_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/;
 
-// ===== Project path utilities (inlined from util/projectPaths.ts) =====
-
 export function isEmptyProject(dir: string): boolean {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) return true;
   try {
@@ -38,8 +36,6 @@ export function requireEmptyProject(target: string): void {
     );
   }
 }
-
-// ===== File template copying (inlined from scaffold/fileTreeCopier.ts) =====
 
 function isBinary(relativePath: string): boolean {
   return relativePath.endsWith(".jar") || relativePath.endsWith(".png") || relativePath.endsWith(".ico");
@@ -74,8 +70,6 @@ export function copyModuleFiles(manifest: ModuleManifest, targetRoot: string, to
     }
   }
 }
-
-// ===== apply() — the validate -> token-state -> compose -> scaffold -> merge -> state flow =====
 
 export type ApplyResult =
   | { kind: "applied"; output: string }
@@ -116,95 +110,107 @@ function resolveDefaultsOnly(module: ModuleManifest, overrides: Record<string, s
   return answers;
 }
 
-function finish(
-  targetProject: string,
+function seedStateForFreshApply(
   state: ProjectState,
-  moduleIds: string[],
-  answersByModule: Map<string, Record<string, string>>,
-  dryRun: boolean,
-  out: string,
   basePackage: string | undefined,
   projectName: string | undefined,
-): ApplyResult {
-  if (dryRun) return { kind: "dryRun", diff: out };
+): ProjectState {
+  if (appliedIds(state).length > 0) return state;
+  if (basePackage === undefined && projectName === undefined) return state;
+  return withBasePackage(
+    withProjectName(state, projectName !== undefined ? projectName : state.projectName),
+    basePackage !== undefined ? basePackage : state.basePackage,
+  );
+}
 
-  let seeded = state;
-  if (appliedIds(state).length === 0) {
-    const name = projectName !== undefined ? projectName : path.basename(targetProject);
+interface FinishOpts {
+  targetProject: string;
+  state: ProjectState;
+  moduleIds: string[];
+  answersByModule: Map<string, Record<string, string>>;
+  dryRun: boolean;
+  out: string;
+  basePackage: string | undefined;
+  projectName: string | undefined;
+}
+
+function finish(opts: FinishOpts): ApplyResult {
+  if (opts.dryRun) return { kind: "dryRun", diff: opts.out };
+
+  let seeded = opts.state;
+  if (appliedIds(opts.state).length === 0) {
+    const name = opts.projectName !== undefined ? opts.projectName : path.basename(opts.targetProject);
     seeded = withProjectName(seeded, name);
-    if (basePackage !== undefined) seeded = withBasePackage(seeded, basePackage);
+    if (opts.basePackage !== undefined) seeded = withBasePackage(seeded, opts.basePackage);
   }
 
   let updated = seeded;
-  for (const id of moduleIds) {
-    const manifest = catalog.modules.get(id)!;
+  for (const id of opts.moduleIds) {
+    const manifest = catalog.modules.get(id);
+    if (manifest === undefined) throw new Error(`Unknown module: '${id}'`);
     updated = withApplied(updated, {
       id,
       version: manifest.version,
       appliedAt: new Date().toISOString(),
-      answers: answersByModule.get(id) ?? {},
+      answers: opts.answersByModule.get(id) ?? {},
     });
   }
-  saveState(targetProject, updated);
-  return { kind: "applied", output: out };
+  saveState(opts.targetProject, updated);
+  return { kind: "applied", output: opts.out };
 }
 
-export async function apply(
-  targetProject: string,
-  moduleIds: string[],
-  overrides: Record<string, string>,
-  dryRun: boolean,
-  basePackage: string | undefined,
-  projectName: string | undefined,
-  fetchImpl: FetchLike = fetch,
-): Promise<ApplyResult> {
-  const state = loadState(targetProject);
+export interface ApplyOpts {
+  targetProject: string;
+  moduleIds: string[];
+  overrides: Record<string, string>;
+  dryRun: boolean;
+  basePackage: string | undefined;
+  projectName: string | undefined;
+  fetchImpl?: FetchLike;
+}
 
-  const problems = validate(catalog, appliedIds(state), moduleIds);
-  if (problems.length > 0) {
-    return { kind: "rejected", problems };
-  }
+export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  const state = loadState(opts.targetProject);
 
-  const tokenState =
-    appliedIds(state).length === 0 && (basePackage !== undefined || projectName !== undefined)
-      ? withBasePackage(
-          withProjectName(state, projectName !== undefined ? projectName : state.projectName),
-          basePackage !== undefined ? basePackage : state.basePackage,
-        )
-      : state;
+  // Validate first so an unknown/invalid batch fails fast without iterating moduleIds twice.
+  const problems = validate(catalog, appliedIds(state), opts.moduleIds);
+  if (problems.length > 0) return { kind: "rejected", problems };
+
+  const tokenState = seedStateForFreshApply(state, opts.basePackage, opts.projectName);
   const projectTokens = projectLevelTokens(tokenState);
 
   const selections: ModuleSelection[] = [];
   const answersByModule = new Map<string, Record<string, string>>();
-  for (const id of moduleIds) {
+  for (const id of opts.moduleIds) {
     const manifest = catalog.modules.get(id);
     if (manifest === undefined) {
-      return { kind: "rejected", problems: [`Unknown module: ${id}`] };
+      return { kind: "rejected", problems: [`Unknown module: '${id}'`] };
     }
-    const answers = resolveDefaultsOnly(manifest, overrides);
+    const answers = resolveDefaultsOnly(manifest, opts.overrides);
     answersByModule.set(id, answers);
     if (manifest.mergeRecipes.length > 0) {
       selections.push({ manifest, answers });
     }
   }
 
-  if (!dryRun) {
-    for (const id of moduleIds) {
+  if (!opts.dryRun) {
+    for (const id of opts.moduleIds) {
       const manifest = catalog.modules.get(id);
       if (manifest === undefined) continue;
       if (manifest.scaffold) {
         if (manifest.id === "base") {
           const resolvedBasePackage = tokenState.basePackage ?? DEFAULT_BASE_PACKAGE;
-          const resolvedProjectName = tokenState.projectName ?? path.basename(targetProject);
+          const resolvedProjectName = tokenState.projectName ?? path.basename(opts.targetProject);
           try {
             await generateSpringBootProject(
-              targetProject,
+              opts.targetProject,
               {
                 groupId: deriveGroupId(resolvedBasePackage),
                 artifactId: resolvedProjectName,
                 packageName: resolvedBasePackage,
                 name: resolvedProjectName,
-                dependencies: initializrDependenciesFor(moduleIds),
+                dependencies: initializrDependenciesFor(opts.moduleIds),
               },
               fetchImpl,
             );
@@ -213,7 +219,11 @@ export async function apply(
           }
         }
         const fileTokens = { ...projectTokens, ...answersByModule.get(id) };
-        copyModuleFiles(manifest, targetProject, fileTokens);
+        try {
+          copyModuleFiles(manifest, opts.targetProject, fileTokens);
+        } catch (err) {
+          return { kind: "failed", output: err instanceof Error ? err.message : String(err) };
+        }
       }
     }
   }
@@ -221,32 +231,52 @@ export async function apply(
   let recipeOutput = "no merges required";
   if (selections.length > 0) {
     const operations = compose(selections);
-    if (dryRun) {
-      return finish(targetProject, state, moduleIds, answersByModule, dryRun, "Dry run — no changes written.", basePackage, projectName);
+    if (opts.dryRun) {
+      return finish({
+        targetProject: opts.targetProject,
+        state,
+        moduleIds: opts.moduleIds,
+        answersByModule,
+        dryRun: opts.dryRun,
+        out: "Dry run — no changes written.",
+        basePackage: opts.basePackage,
+        projectName: opts.projectName,
+      });
     }
     try {
-      applyOperations(targetProject, operations);
+      applyOperations(opts.targetProject, operations);
     } catch (err) {
       return { kind: "failed", output: err instanceof Error ? err.message : String(err) };
     }
     recipeOutput = `Applied ${operations.length} merge operation(s).`;
   }
 
-  if (!dryRun) {
-    for (const id of moduleIds) {
+  if (!opts.dryRun) {
+    for (const id of opts.moduleIds) {
       const manifest = catalog.modules.get(id);
       if (manifest === undefined) continue;
       if (!manifest.scaffold && manifest.fileTemplates.length > 0) {
         const fileTokens = { ...projectTokens, ...answersByModule.get(id) };
-        copyModuleFiles(manifest, targetProject, fileTokens);
+        try {
+          copyModuleFiles(manifest, opts.targetProject, fileTokens);
+        } catch (err) {
+          return { kind: "failed", output: err instanceof Error ? err.message : String(err) };
+        }
       }
     }
   }
 
-  return finish(targetProject, state, moduleIds, answersByModule, dryRun, recipeOutput, basePackage, projectName);
+  return finish({
+    targetProject: opts.targetProject,
+    state,
+    moduleIds: opts.moduleIds,
+    answersByModule,
+    dryRun: opts.dryRun,
+    out: recipeOutput,
+    basePackage: opts.basePackage,
+    projectName: opts.projectName,
+  });
 }
-
-// ===== upgrade() — the upgrade-only flow (no Initializr call, no file copy, no scaffold) =====
 
 export type UpgradeResult =
   | { kind: "upToDate" }
@@ -316,8 +346,6 @@ export function upgrade(targetProject: string, onlyModuleId: string | undefined,
   saveState(targetProject, updated);
   return { kind: "upgraded", changes };
 }
-
-// ===== list/status/info/config — straight command outputs =====
 
 function javaList(items: string[]): string {
   return `[${items.join(", ")}]`;
@@ -436,9 +464,14 @@ export function runConfig(): void {
   );
 }
 
-// ===== add — needs the wizard, so it lives here too =====
+export interface AddOpts {
+  project: string;
+  moduleIds: string[];
+  set: Record<string, string>;
+  dryRun: boolean;
+}
 
-export async function runAdd(io: ReplIo, opts: { project: string; moduleIds: string[]; set: Record<string, string>; dryRun: boolean }): Promise<void> {
+export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
   let ids = opts.moduleIds;
   if (ids.length === 0) {
     const typed = await askNonBlankText(
@@ -453,7 +486,14 @@ export async function runAdd(io: ReplIo, opts: { project: string; moduleIds: str
       .filter((s) => s !== "");
   }
 
-  const result = await apply(path.resolve(opts.project), ids, opts.set, opts.dryRun, undefined, undefined);
+  const result = await apply({
+    targetProject: path.resolve(opts.project),
+    moduleIds: ids,
+    overrides: opts.set,
+    dryRun: opts.dryRun,
+    basePackage: undefined,
+    projectName: undefined,
+  });
 
   switch (result.kind) {
     case "applied":
@@ -468,8 +508,6 @@ export async function runAdd(io: ReplIo, opts: { project: string; moduleIds: str
       throw new Error(`Merge run failed:\n${result.output}`);
   }
 }
-
-// ===== new — the wizard (project name loop, service choice, capability wizard, etc.) =====
 
 export interface NewOptions {
   name?: string;
@@ -492,13 +530,12 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     console.log(`${output.hint("Let's set up your project — press Enter on any question to accept the default.")}\n`);
   }
 
-  const target = await resolveTarget(io, askText, options.name);
+  const target = await resolveTarget(io, options.name);
 
   const serviceChoices = new Map([...catalog.services.values()].map((s) => [`${s.id} — ${s.displayName}`, s.id]));
   const serviceId = await askOptional(
     io,
     options.service,
-    "service",
     "What would you like to create?",
     serviceChoices,
     "Just a base project",
@@ -506,7 +543,7 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
 
   let moduleIds =
     serviceId === undefined
-      ? await buildCapabilityWizard(io, askChoice, askMultiple, options.database, options.capabilities, options.cacheProvider)
+      ? await buildCapabilityWizard(io, options.database, options.capabilities, options.cacheProvider)
       : catalog.services.get(serviceId)!.modules;
 
   let archetypeAnswers: Record<string, string> = {};
@@ -532,7 +569,14 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     console.log(`${options.dryRun ? "Previewing " : "Setting up "}${output.accent(target)}...`);
   }
 
-  const result = await apply(target, moduleIds, archetypeAnswers, options.dryRun, resolvedBasePackage, path.basename(target));
+  const result = await apply({
+    targetProject: target,
+    moduleIds,
+    overrides: archetypeAnswers,
+    dryRun: options.dryRun,
+    basePackage: resolvedBasePackage,
+    projectName: path.basename(target),
+  });
 
   switch (result.kind) {
     case "applied":
@@ -557,7 +601,7 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
   }
 }
 
-async function resolveTarget(io: ReplIo, askText: typeof import("./wizard.ts")["askText"], name: string | undefined): Promise<string> {
+async function resolveTarget(io: ReplIo, name: string | undefined): Promise<string> {
   let candidate = name;
   while (true) {
     const resolved = await askText(io, candidate, "name", "Project name", suggestProjectName());
@@ -579,29 +623,26 @@ function suggestProjectName(): string {
 
 async function buildCapabilityWizard(
   io: ReplIo,
-  askChoice: typeof import("./wizard.ts")["askChoice"],
-  askMultiple: typeof import("./wizard.ts")["askMultiple"],
   database: string | undefined,
   capabilities: string | undefined,
   cacheProvider: string | undefined,
 ): Promise<string[]> {
   const moduleIds: string[] = ["base"];
-  const databaseModule = await resolveDatabase(io, askChoice, database);
+  const databaseModule = await resolveDatabase(io, database);
   if (databaseModule !== undefined) moduleIds.push(databaseModule);
 
-  const capabilityIds = await resolveCapabilityIds(io, capabilities, databaseModule, askMultiple);
+  const capabilityIds = await resolveCapabilityIds(io, capabilities, databaseModule);
   const cacheModule = capabilityIds.includes("caching")
-    ? await resolveCacheProvider(io, askChoice, cacheProvider)
+    ? await resolveCacheProvider(io, cacheProvider)
     : undefined;
 
   for (const capability of capabilityIds) {
-    const moduleId = mapCapability(capability, databaseModule, cacheModule);
-    moduleIds.push(moduleId);
+    moduleIds.push(CAPABILITY_TO_MODULE(capability, databaseModule, cacheModule));
   }
   return moduleIds;
 }
 
-function mapCapability(capability: string, databaseModule: string | undefined, cacheModule: string | undefined): string {
+const CAPABILITY_TO_MODULE = (capability: string, databaseModule: string | undefined, cacheModule: string | undefined): string => {
   switch (capability) {
     case "validation":
       return "validation";
@@ -628,9 +669,9 @@ function mapCapability(capability: string, databaseModule: string | undefined, c
     default:
       throw new Error(`Unknown capability '${capability}' — expected one of: validation, migrations, security, caching, aop, scheduling, async, auditing, observability, openapi, testing`);
   }
-}
+};
 
-async function resolveDatabase(io: ReplIo, askChoice: typeof import("./wizard.ts")["askChoice"], database: string | undefined): Promise<string | undefined> {
+async function resolveDatabase(io: ReplIo, database: string | undefined): Promise<string | undefined> {
   if (database?.toLowerCase() === "none") return undefined;
   if (hasText(database)) return database;
   const choices = new Map([
@@ -639,14 +680,13 @@ async function resolveDatabase(io: ReplIo, askChoice: typeof import("./wizard.ts
     ["MariaDB", "mariadb"],
     ["H2 (in-memory — dev/test only)", "h2"],
   ]);
-  return askOptional(io, undefined, "database", "Database", choices, "None");
+  return askOptional(io, undefined, "Database", choices, "None");
 }
 
 async function resolveCapabilityIds(
   io: ReplIo,
   capabilities: string | undefined,
   databaseModule: string | undefined,
-  askMultiple: typeof import("./wizard.ts")["askMultiple"],
 ): Promise<string[]> {
   if (hasText(capabilities)) {
     return capabilities.split(",").map((s) => s.trim()).filter((s) => s !== "");
@@ -666,7 +706,7 @@ async function resolveCapabilityIds(
   return askMultiple(io, "Capabilities", choices);
 }
 
-async function resolveCacheProvider(io: ReplIo, askChoice: typeof import("./wizard.ts")["askChoice"], cacheProvider: string | undefined): Promise<string> {
+async function resolveCacheProvider(io: ReplIo, cacheProvider: string | undefined): Promise<string> {
   if (hasText(cacheProvider)) {
     return cacheProvider.toLowerCase() === "redis" ? "caching-redis" : "caching-caffeine";
   }

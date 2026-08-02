@@ -4,9 +4,8 @@ export function isInteractive(): boolean {
   return process.stdin.isTTY === true && process.stdout.isTTY === true;
 }
 
-const RESET = "\x1b[0m";
 const colorOn = process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
-const c = (code: string, s: string): string => (colorOn ? `\x1b[${code}m${s}${RESET}` : s);
+const c = (code: string, s: string): string => (colorOn ? `\x1b[${code}m${s}\x1b[0m` : s);
 const question = (s: string): string => c("1;36", s);
 const accent = (s: string): string => c("36", s);
 const hint = (s: string): string => c("2", s);
@@ -25,7 +24,6 @@ async function readLine(io: ReplIo, promptText: string): Promise<string | null> 
   return io.lines.next();
 }
 
-/** Free-text prompt with a default value applied on blank input. */
 export async function askText(
   io: ReplIo,
   provided: string | undefined,
@@ -42,7 +40,6 @@ export async function askText(
   return line.trim() === "" ? defaultValue : line.trim();
 }
 
-/** Free-text prompt that won't accept blank input - loops until non-empty. */
 export async function askNonBlankText(
   io: ReplIo,
   provided: string | undefined,
@@ -61,11 +58,9 @@ export async function askNonBlankText(
   }
 }
 
-/** Numbered choice list with a "0" sentinel for an optional "none". */
 export async function askOptional(
   io: ReplIo,
   provided: string | undefined,
-  promptLabel: string,
   prompt: string,
   choices: Map<string, string>,
   noneLabel: string,
@@ -85,7 +80,6 @@ export async function askOptional(
   return undefined;
 }
 
-/** Numbered choice list with a required answer - throws on empty/non-interactive. */
 export async function askChoice(
   io: ReplIo,
   provided: string | undefined,
@@ -114,7 +108,6 @@ export async function askChoice(
   return defaultId;
 }
 
-/** Multi-select via toggling numbered choices, blank line confirms. */
 export async function askMultiple(
   io: ReplIo,
   prompt: string,

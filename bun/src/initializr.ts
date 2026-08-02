@@ -4,23 +4,13 @@ import path from "node:path";
 const BOOT_VERSION = "4.1.0";
 const JAVA_VERSION = "25";
 
-/** Just the callable shape of fetch, not `typeof fetch` (which also requires the `preconnect`
- * static property) - this is the part that's actually swappable for a test fake. */
 export type FetchLike = (url: string) => Promise<Response>;
 
-/** jloom module id -> Spring Initializr dependency id(s). Doesn't need to be exhaustive: any
- * module's own mergeRecipes still run after this (see moduleApplier.ts) and the existing
- * AddDependency merge op is idempotent per (configuration, coordinate), so it silently no-ops
- * for anything Initializr already added — this table only picks a good *starting* set.
- *
- * Deliberately NOT mapping jwt-auth: verified end to end that Initializr's own "security" +
- * "oauth2-resource-server" combination bundles into spring-boot-starter-security-oauth2-
- * resource-server, a different artifact than the standalone spring-boot-starter-oauth2-
- * resource-server jwt-auth's own SecurityConfig/JwtDecoder wiring was built and tested
- * against (jwt-auth's own merges/gradle.yml already adds the correct one - real
- * ./gradlew test runs of user-service showed every security-related test failing with 403
- * until this mapping entry was removed). Trust the already-proven fragment over guessing at
- * Initializr's bundling for anything that already has working coverage. */
+/** `jwt-auth` is intentionally NOT here: Initializr's "security" + "oauth2-resource-server"
+ * combo bundles into spring-boot-starter-security-oauth2-resource-server, which is not
+ * what jwt-auth's own SecurityConfig is wired against (real ./gradlew test runs of
+ * user-service showed every security test returning 403 until this entry was removed).
+ * jwt-auth's own merges/gradle.yml already adds the correct artifacts. */
 export const INITIALIZR_DEPENDENCY_MAP: Record<string, string[]> = {
   postgres: ["data-jpa", "postgresql"],
   mysql: ["data-jpa", "mysql"],
@@ -73,9 +63,6 @@ export function buildInitializrUrl(opts: InitializrOptions): string {
   return `https://start.spring.io/starter.tgz?${params.toString()}`;
 }
 
-/** Calls the real Spring Initializr service to generate the project skeleton, replacing what
- * jloom used to hand-maintain as static file templates. fetchImpl is injectable so tests never
- * need a live network call (see initializr.test.ts). */
 export async function generateSpringBootProject(
   targetDir: string,
   opts: InitializrOptions,
@@ -90,19 +77,12 @@ export async function generateSpringBootProject(
   const archive = new Bun.Archive(buf);
   await archive.extract(targetDir);
 
-  // Spring Boot's own generic boilerplate help text — not something jloom's generated
-  // projects want lingering alongside jloom's own README.
+  // Drop Spring Boot's generic HELP.md, then rename application.yaml to .yml so every merge
+  // fragment's filePattern of "**/application.yml" matches.
   const helpFile = path.join(targetDir, "HELP.md");
-  if (existsSync(helpFile)) {
-    rmSync(helpFile);
-  }
+  if (existsSync(helpFile)) rmSync(helpFile);
 
-  // Initializr's configurationFileFormat=yaml writes application.yaml, but every one of
-  // jloom's own merge fragments targets application.yml (filePattern: "**/application.yml") -
-  // normalize the extension rather than touching every fragment in the catalog.
   const yamlFile = path.join(targetDir, "src/main/resources/application.yaml");
   const ymlFile = path.join(targetDir, "src/main/resources/application.yml");
-  if (existsSync(yamlFile) && !existsSync(ymlFile)) {
-    renameSync(yamlFile, ymlFile);
-  }
+  if (existsSync(yamlFile) && !existsSync(ymlFile)) renameSync(yamlFile, ymlFile);
 }

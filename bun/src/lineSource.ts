@@ -4,12 +4,9 @@ export interface LineSource {
   next(): Promise<string | null>;
 }
 
-/** readline/promises' question() cannot be called repeatedly against piped/closing stdin
- * reliably (the second call hangs or aborts even with buffered input still pending), and
- * can't be nested inside a `for await...of rl` loop either (both try to consume the same
- * 'line' event exclusively). This is a single persistent 'line' listener shared by the whole
- * process - the REPL's own loop and any nested wizard prompt both pull from the same queue,
- * so reads compose safely no matter how deep the call stack. */
+// readline/promises' question() can't be called repeatedly against piped/closing stdin nor
+// nested inside a for-await-of loop - both try to consume the same 'line' event exclusively.
+// One persistent 'line' listener feeds a shared async queue instead.
 export function createLineSource(rl: Interface): LineSource {
   const queue: string[] = [];
   const waiters: Array<(value: string | null) => void> = [];

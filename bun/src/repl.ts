@@ -52,9 +52,7 @@ export async function runRepl(io: ReplIo): Promise<void> {
     io.rl.write("\n");
   });
 
-  // One Commander program instance is reused across every REPL iteration. exitOverride() (set
-  // in buildProgram) makes parse/help/version errors throw CommanderError instead of calling
-  // process.exit, which is what lets us keep the REPL running on bad input.
+  // One Commander program instance is reused across every REPL iteration.
   const program = buildProgram(io);
   const prompt = `${output.question("jloom")}> `;
   printMenu();
@@ -73,8 +71,8 @@ export async function runRepl(io: ReplIo): Promise<void> {
       continue;
     }
 
-    // Allow the user to type just a number (1..8) for the menu entry. With `from: "user"`
-    // the args are as a user would type them — just <cmd> <args>, no program-name prefix.
+    // Allow typing just a menu number (1..8). With `from: "user"` the args are as a user would
+    // type them, so no program-name prefix is prepended.
     const tokens = trimmed.split(/\s+/);
     const choice = asMenuChoice(tokens[0]!);
     if (choice !== undefined) tokens[0] = MENU[choice - 1]!.command;
@@ -82,7 +80,6 @@ export async function runRepl(io: ReplIo): Promise<void> {
     try {
       await program.parseAsync(tokens, { from: "user" });
     } catch (err) {
-      // helpDisplayed/version already printed by Commander; don't re-emit or REPL quits.
       if (err instanceof CommanderError && (err.code === "commander.help" || err.code === "commander.version")) {
         continue;
       }
