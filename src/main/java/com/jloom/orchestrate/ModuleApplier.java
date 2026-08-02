@@ -92,7 +92,7 @@ public final class ModuleApplier {
             if (!result.success()) {
                 return ApplyResult.failed(result.output());
             }
-            recipeOutput = result.streamed() ? "" : result.output();
+            recipeOutput = result.output();
         }
 
         if (!dryRun) {

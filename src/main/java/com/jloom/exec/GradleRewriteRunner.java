@@ -2,10 +2,7 @@ package com.jloom.exec;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.InterruptedIOException;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,7 +11,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class GradleRewriteRunner {
 
@@ -22,7 +18,7 @@ public final class GradleRewriteRunner {
         ProcessWaiterResult waitFor(Process process) throws IOException, InterruptedException;
     }
 
-    record ProcessWaiterResult(int exitCode, String output, boolean streamed) {
+    record ProcessWaiterResult(int exitCode, String output) {
     }
 
     static final class StreamingWaiter implements ProcessWaiter {
@@ -36,42 +32,33 @@ public final class GradleRewriteRunner {
 
         @Override
         public ProcessWaiterResult waitFor(Process process) throws IOException, InterruptedException {
+            // Always capture silently rather than streaming the child Gradle/OpenRewrite
+            // process's raw output live — that output is internal build-tool chatter
+            // (task boilerplate, recipe descriptors, deprecation warnings) that isn't
+            // meaningful to a user watching `jloom new`. The ticker (see startTickerIfTty)
+            // already gives progress feedback; the full output is only worth showing when
+            // the run actually failed, so callers can debug it.
             StringBuilder captured = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                if (tty) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        captured.append(line).append('\n');
-                        sink.writeLine(line);
-                    }
-                } else {
-                    char[] buf = new char[4096];
-                    int n;
-                    while ((n = reader.read(buf)) >= 0) {
-                        captured.append(buf, 0, n);
-                    }
+                char[] buf = new char[4096];
+                int n;
+                while ((n = reader.read(buf)) >= 0) {
+                    captured.append(buf, 0, n);
                 }
             }
             int exitCode = process.waitFor();
-            return new ProcessWaiterResult(exitCode, captured.toString(), tty);
+            return new ProcessWaiterResult(exitCode, captured.toString());
         }
     }
 
     interface OutputSink {
-        void writeLine(String line);
         void tick(int elapsedSeconds);
     }
 
-    private static final OutputSink STDERR_SINK = new OutputSink() {
-        @Override public void writeLine(String line) {
-            System.out.println(line);
-            System.out.flush();
-        }
-        @Override public void tick(int elapsedSeconds) {
-            System.err.printf("\r[ . ] Running OpenRewrite recipes… %ds   ", elapsedSeconds);
-            System.err.flush();
-        }
+    private static final OutputSink STDERR_SINK = elapsedSeconds -> {
+        System.err.printf("\r[ . ] Running OpenRewrite recipes… %ds   ", elapsedSeconds);
+        System.err.flush();
     };
 
     private final RewriteInitScriptWriter initScriptWriter = new RewriteInitScriptWriter();
@@ -130,10 +117,10 @@ public final class GradleRewriteRunner {
                 output = output + "\nOpenRewrite process was killed by SIGKILL (exit code 137). "
                         + "If this is unexpected, check for an external OOM killer, container limits, or manual kill.\n";
             }
-            if (!result.streamed() && exitCode != 0 && !output.isEmpty()) {
+            if (exitCode != 0 && !output.isEmpty()) {
                 System.err.println(output);
             }
-            return new Result(exitCode == 0, exitCode, output, result.streamed());
+            return new Result(exitCode == 0, exitCode, output);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             process.destroyForcibly();
@@ -208,7 +195,7 @@ public final class GradleRewriteRunner {
                 || output.contains("unable to create new native thread");
     }
 
-    public record Result(boolean success, int exitCode, String output, boolean streamed) {
+    public record Result(boolean success, int exitCode, String output) {
     }
 
     public static final class RewriteExecutionException extends RuntimeException {
