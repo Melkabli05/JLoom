@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# jloom installer — clones the repo, builds the CLI, and configures executables.
-# Works on Linux and macOS with bash 4.0+, git, and JDK 25+.
+# jloom installer — clones the repo, builds the standalone CLI binary via Bun, and
+# configures executables.
+# Works on Linux and macOS with bash 4.0+, git, and Bun 1.3.0+.
 #
 # Quick start (no install required):
 #   curl -sSL https://raw.githubusercontent.com/Melkabli05/JLoom/main/install.sh | bash
 #
 # SECURITY MODEL
-#   - This script runs `git clone` and then executes the cloned `gradlew` (a shell
-#     script) with whatever Java toolchain is on the machine. The remote is
-#     trusted by default. Set JLOOM_REPO to override.
+#   - This script runs `git clone` and then executes `bun install` / `bun run compile`
+#     from the cloned tree. The remote is trusted by default. Set JLOOM_REPO to override.
 #   - By default we pin to a specific git ref (configurable via JLOOM_REF) so a
 #     compromised or supply-chain-injected `main` does not silently install
 #     arbitrary code. Pass `--latest` to opt into tracking main HEAD.
@@ -112,7 +112,8 @@ if [ "$SELF_UPDATE" = "1" ]; then
     fi
 fi
 
-GRADLE_INSTALL_DIR="$INSTALL_DIR/build/install/jloom"
+BUN_PROJECT_DIR="$INSTALL_DIR/bun"
+DIST_DIR="$BUN_PROJECT_DIR/dist"
 BIN_DIR="$INSTALL_DIR/bin"
 
 # 1. Verify prerequisites
@@ -120,15 +121,14 @@ BIN_DIR="$INSTALL_DIR/bin"
 info "Checking prerequisites..."
 
 command -v git >/dev/null 2>&1 || fail "git not found. Please install git and re-run."
-command -v java >/dev/null 2>&1 || fail "java not found. Install JDK 25+ from https://adoptium.net/ and re-run."
+command -v bun >/dev/null 2>&1 || fail "bun not found. Install it with: curl -fsSL https://bun.sh/install | bash — then re-run this script."
 
-JAVA_VERSION_STR=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
-JAVA_MAJOR=$(printf '%s' "$JAVA_VERSION_STR" | awk -F. '{print ($1 == 1) ? $2 : $1}' | sed 's/-.*//')
-
-if [ -z "$JAVA_MAJOR" ] || [ "$JAVA_MAJOR" -lt 25 ]; then
-    fail "Java 25+ required. Detected version: ${JAVA_VERSION_STR:-unknown}. Install JDK 25+ and re-run."
+BUN_VERSION_STR=$(bun --version 2>&1)
+BUN_REQUIRED="1.3.0"
+if [ "$(printf '%s\n%s\n' "$BUN_REQUIRED" "$BUN_VERSION_STR" | sort -V | head -n1)" != "$BUN_REQUIRED" ]; then
+    fail "Bun $BUN_REQUIRED+ required. Detected version: ${BUN_VERSION_STR:-unknown}. Run: bun upgrade"
 fi
-success "Java $JAVA_VERSION_STR and git verified."
+success "Bun $BUN_VERSION_STR and git verified."
 
 if [ "$(id -u)" = "0" ] && [ "$AUTO_SYMLINK" -ne 2 ]; then
     warn "Running as root. Consider user-level installation unless intentionally deploying system-wide."
@@ -155,30 +155,42 @@ if [ "$USE_LATEST" -eq 0 ] && [ "$REF" = "main" ]; then
     warn "Pinned to HEAD of 'main'. For immutable builds, set JLOOM_REF to a specific commit SHA or tag."
 fi
 
+[ -d "$BUN_PROJECT_DIR" ] || fail "Expected a bun/ directory at $BUN_PROJECT_DIR but none was found. Is JLOOM_REF pointing at a pre-Bun-migration ref?"
+
 # 3. Build artifact (optionally with tests)
 
-info "Building jloom via Gradle${NO_TESTS:+ (skipping tests)}..."
+info "Installing dependencies via Bun..."
 (
-    cd "$INSTALL_DIR"
-    if [ "$NO_TESTS" = "0" ]; then
-        GRADLE_TASKS="installDist --no-daemon"
-    else
-        GRADLE_TASKS="installDist --no-daemon -x test -x check"
-    fi
-    ./gradlew $GRADLE_TASKS || fail "Gradle build failed"
+    cd "$BUN_PROJECT_DIR"
+    bun install --frozen-lockfile 2>/dev/null || bun install || fail "bun install failed"
 )
 
-TARGET_BIN="$GRADLE_INSTALL_DIR/bin/jloom"
+if [ "$NO_TESTS" = "0" ]; then
+    info "Running test suite (fully offline, no network calls)..."
+    (cd "$BUN_PROJECT_DIR" && bun test) || fail "bun test failed"
+    success "Tests passed."
+else
+    info "Skipping test suite (--no-tests)."
+fi
+
+info "Compiling standalone binary via Bun..."
+(cd "$BUN_PROJECT_DIR" && bun run compile) || fail "bun run compile failed"
+
+TARGET_BIN="$DIST_DIR/jloom"
 if [ ! -x "$TARGET_BIN" ]; then
     fail "Build completed, but expected binary was not found or not executable at: $TARGET_BIN"
 fi
+if [ ! -d "$DIST_DIR/catalog" ]; then
+    fail "Build completed, but the module catalog was not found beside the binary at: $DIST_DIR/catalog"
+fi
 
-# Make $INSTALL_DIR/bin the canonical location by symlinking it at the front of the
-# tree. This keeps the on-PATH entry clean (~/.jloom/bin, not ~/.jloom/build/install/jloom/bin).
+# Make $INSTALL_DIR/bin the canonical location by symlinking the whole dist/ dir (the
+# compiled binary AND its sibling catalog/ directory need to stay together — the binary
+# locates the catalog by looking next to its own real, symlink-resolved path).
 mkdir -p "$INSTALL_DIR"
 rm -rf "$BIN_DIR"
-ln -s "$GRADLE_INSTALL_DIR/bin" "$BIN_DIR"
-success "Linked canonical path: $BIN_DIR -> $GRADLE_INSTALL_DIR/bin"
+ln -s "$DIST_DIR" "$BIN_DIR"
+success "Linked canonical path: $BIN_DIR -> $DIST_DIR"
 
 # 4. Handle execution pathing
 
@@ -239,27 +251,29 @@ if [ "$PATH_LINKED" -eq 0 ] && [ "$MODIFY_RC" -eq 1 ]; then
 fi
 
 # 6. Verification — exercise multiple commands to confirm the install works
-# end-to-end, not just the simplest one (jloom list).
+# end-to-end, not just the simplest one (jloom list). The compiled binary is
+# self-contained (bun/node are not required at runtime), so we deliberately
+# strip PATH down to bare essentials for this check.
 
 echo
-info "Verifying installation..."
+info "Verifying installation (standalone binary, no bun/node required at runtime)..."
 
 VERIFICATION_FAILED=0
-if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" --version >/dev/null 2>&1; then
+if PATH="$BIN_DIR:/usr/bin:/bin" "$BIN_DIR/jloom" --version >/dev/null 2>&1; then
     success "jloom --version: works"
 else
     warn "jloom --version failed"
     VERIFICATION_FAILED=1
 fi
 
-if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" --help >/dev/null 2>&1; then
+if PATH="$BIN_DIR:/usr/bin:/bin" "$BIN_DIR/jloom" --help >/dev/null 2>&1; then
     success "jloom --help: works"
 else
     warn "jloom --help failed"
     VERIFICATION_FAILED=1
 fi
 
-if PATH="$BIN_DIR:$PATH" "$BIN_DIR/jloom" list --what modules >/dev/null 2>&1; then
+if PATH="$BIN_DIR:/usr/bin:/bin" "$BIN_DIR/jloom" list --what modules >/dev/null 2>&1; then
     success "jloom list --what modules: works"
 else
     warn "jloom list failed"
@@ -280,5 +294,5 @@ fi
 
 echo
 info "To upgrade in the future, run:"
-info "  ${GREEN}cd $INSTALL_DIR && git pull && ./gradlew installDist${NC}"
+info "  ${GREEN}cd $INSTALL_DIR && git pull && cd bun && bun install && bun run compile${NC}"
 echo
