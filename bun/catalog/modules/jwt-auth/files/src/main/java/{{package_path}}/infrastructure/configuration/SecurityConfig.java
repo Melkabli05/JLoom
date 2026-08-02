@@ -1,5 +1,4 @@
 package {{package}}.infrastructure.configuration;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -19,15 +18,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                             JwtDecoder jwtDecoder,
@@ -37,10 +33,9 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
-                // /actuator/* — standard health/info probes.
                 auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
-                // /.well-known/jwks.json — the JWKS endpoint itself must be public, otherwise
-                // the resource server's own JwtDecoder can't fetch it to validate tokens.
+
+
                 auth.requestMatchers("/.well-known/jwks.json").permitAll();
                 for (String pathSpec : publicPaths(environment)) {
                     int separator = pathSpec.indexOf(':');
@@ -55,7 +50,6 @@ public class SecurityConfig {
                     .jwtAuthenticationConverter(jwtAuthenticationConverter)));
         return http.build();
     }
-
     private static List<String> publicPaths(Environment environment) {
         Map<String, String> byModule = Binder.get(environment)
                 .bind("jwt.public-paths", Bindable.mapOf(String.class, String.class))
@@ -67,18 +61,17 @@ public class SecurityConfig {
                 .toList();
     }
 
-    // Asymmetric validation against the issuer's published JWK Set — no shared secret to keep in
-    // sync across services (see Spring Security's own OAuth2 Resource Server reference docs,
-    // which call shared-secret symmetric validation "limited scenarios" for exactly this
-    // multi-service shape). Also attaches issuer validation via the same built-in
-    // JwtValidators.createDefaultWithIssuer used by Spring Boot's own auto-configuration.
+
+
+
+
+
     @Bean
     public JwtDecoder jwtDecoder(@Value("${jwt.jwk-set-uri}") String jwkSetUri, @Value("${jwt.issuer}") String issuer) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
         decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuer));
         return decoder;
     }
-
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
@@ -88,7 +81,6 @@ public class SecurityConfig {
         converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
         return converter;
     }
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();

@@ -1,25 +1,11 @@
 import { existsSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fetchInitializrMetadata, isVersionCompatible } from "./initializrMetadata.ts";
-
 const BOOT_VERSION = "4.1.0";
 const JAVA_VERSION = "25";
-
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
-/** `jwt-auth` is intentionally NOT here: Initializr's "security" + "oauth2-resource-server"
- * combo bundles into spring-boot-starter-security-oauth2-resource-server, which is not
- * what jwt-auth's own SecurityConfig is wired against (real ./gradlew test runs of
- * user-service showed every security test returning 403 until this entry was removed).
- * jwt-auth's own merges/gradle.yml already adds the correct artifacts.
- *
- * `openapi` is intentionally NOT here either, for the same reason but a different failure
- * mode: Initializr's own "springdoc-openapi" dependency has a versionRange of
- * [4.0.0, 4.1.0-M1) - it does not support Boot 4.1.0 (jloom's BOOT_VERSION) at all, and
- * requesting it returns a hard 400 from start.spring.io (verified directly against the live
- * service). jloom's own openapi module already adds a version-pinned, Boot-4-verified
- * springdoc-openapi-starter-webmvc-ui artifact via its own merges/gradle.yml - no need to ask
- * Initializr for a dependency it currently can't serve for this Boot version anyway. */
+
 export const INITIALIZR_DEPENDENCY_MAP: Record<string, string[]> = {
   postgres: ["data-jpa", "postgresql"],
   mysql: ["data-jpa", "mysql"],
@@ -33,7 +19,6 @@ export const INITIALIZR_DEPENDENCY_MAP: Record<string, string[]> = {
   "otel-tracing": ["actuator", "distributed-tracing", "prometheus"],
   testcontainers: ["testcontainers"],
 };
-
 export function initializrDependenciesFor(moduleIds: string[]): string[] {
   const deps = new Set<string>(["web"]);
   for (const id of moduleIds) {
@@ -43,7 +28,6 @@ export function initializrDependenciesFor(moduleIds: string[]): string[] {
   }
   return [...deps];
 }
-
 export interface InitializrOptions {
   groupId: string;
   artifactId: string;
@@ -51,7 +35,6 @@ export interface InitializrOptions {
   name: string;
   dependencies: string[];
 }
-
 export function buildInitializrUrl(opts: InitializrOptions): string {
   const params = new URLSearchParams({
     type: "gradle-project-kotlin",
@@ -70,7 +53,6 @@ export function buildInitializrUrl(opts: InitializrOptions): string {
   }
   return `https://start.spring.io/starter.tgz?${params.toString()}`;
 }
-
 export async function generateSpringBootProject(
   targetDir: string,
   opts: InitializrOptions,
@@ -82,7 +64,6 @@ export async function generateSpringBootProject(
       `Spring Initializr no longer offers bootVersion ${BOOT_VERSION} - jloom needs a maintenance update to a currently supported version.`,
     );
   }
-
   const warnings: string[] = [];
   const compatibleDependencies = opts.dependencies.filter((dep) => {
     const range = metadata.dependencyRanges.get(dep);
@@ -94,7 +75,6 @@ export async function generateSpringBootProject(
     }
     return compatible;
   });
-
   const url = buildInitializrUrl({ ...opts, dependencies: compatibleDependencies });
   const res = await fetchImpl(url);
   if (!res.ok) {
@@ -104,14 +84,12 @@ export async function generateSpringBootProject(
   const archive = new Bun.Archive(buf);
   await archive.extract(targetDir);
 
-  // Drop Spring Boot's generic HELP.md, then rename application.yaml to .yml so every merge
-  // fragment's filePattern of "**/application.yml" matches.
+
+
   const helpFile = path.join(targetDir, "HELP.md");
   if (existsSync(helpFile)) rmSync(helpFile);
-
   const yamlFile = path.join(targetDir, "src/main/resources/application.yaml");
   const ymlFile = path.join(targetDir, "src/main/resources/application.yml");
   if (existsSync(yamlFile) && !existsSync(ymlFile)) renameSync(yamlFile, ymlFile);
-
   return { warnings };
 }

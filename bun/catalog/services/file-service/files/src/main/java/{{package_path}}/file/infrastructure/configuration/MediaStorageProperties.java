@@ -1,10 +1,7 @@
 package {{package}}.file.infrastructure.configuration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.unit.DataSize;
-
 import java.time.Duration;
-
 @ConfigurationProperties(prefix = "media.storage")
 public record MediaStorageProperties(
         String type,
@@ -12,7 +9,6 @@ public record MediaStorageProperties(
         Minio minio,
         DataSize maxFileSize
 ) {
-
     public MediaStorageProperties {
         if (type == null || type.isBlank()) {
             type = "local";
@@ -21,7 +17,6 @@ public record MediaStorageProperties(
             maxFileSize = DataSize.ofMegabytes(100);
         }
     }
-
     public record Local(String baseDir) {
         public Local {
             if (baseDir == null || baseDir.isBlank()) {
@@ -29,7 +24,6 @@ public record MediaStorageProperties(
             }
         }
     }
-
     public record Minio(
             String endpoint,
             String accessKey,

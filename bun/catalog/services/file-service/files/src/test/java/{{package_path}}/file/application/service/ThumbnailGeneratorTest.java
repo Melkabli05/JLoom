@@ -1,5 +1,4 @@
 package {{package}}.file.application.service;
-
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaAssetStatus;
 import {{package}}.file.domain.model.MediaVisibility;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.retry.RetryPolicy;
 import org.springframework.core.retry.RetryTemplate;
-
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -22,23 +20,17 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
-
 import javax.imageio.ImageIO;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 class ThumbnailGeneratorTest {
-
     @TempDir
     Path tempDir;
-
     private MediaAssetRepository repository;
     private LocalFilesystemStorage storage;
     private ThumbnailGenerator generator;
-
     @BeforeEach
     void setUp() {
         repository = mock(MediaAssetRepository.class);
@@ -50,7 +42,6 @@ class ThumbnailGeneratorTest {
                 new MediaProperties(null, null, "ROLE_ADMIN"),
                 new RetryTemplate(noRetry), meterRegistry);
     }
-
     @Test
     void generatePopulatesThumbnailKeyForPng() throws Exception {
         UUID id = UUID.randomUUID();
@@ -62,13 +53,10 @@ class ThumbnailGeneratorTest {
                 MediaAssetStatus.AVAILABLE, "test.png", now, now, null, null);
         when(repository.findById(id)).thenReturn(java.util.Optional.of(asset));
         storage.put(asset.getStorageKey(), new ByteArrayInputStream(realPng), realPng.length, "image/png");
-
         generator.generate(id);
-
         MediaAsset after = repository.findById(id).orElseThrow();
         assertThat(after.getThumbnailKey()).isNotBlank();
     }
-
     private byte[] makeRealPng(int width, int height) throws Exception {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = image.createGraphics();

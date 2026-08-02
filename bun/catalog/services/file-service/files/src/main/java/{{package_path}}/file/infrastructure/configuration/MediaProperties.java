@@ -1,18 +1,14 @@
 package {{package}}.file.infrastructure.configuration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.awt.Dimension;
 import java.time.Duration;
 import java.util.List;
-
 @ConfigurationProperties(prefix = "media")
 public record MediaProperties(
         Thumbnails thumbnails,
         Cleanup cleanup,
         String adminAuthority
 ) {
-
     public MediaProperties {
         if (thumbnails == null) {
             thumbnails = new Thumbnails(List.of(new Dimension(64, 64), new Dimension(256, 256)), 85);
@@ -24,7 +20,6 @@ public record MediaProperties(
             adminAuthority = "ROLE_ADMIN";
         }
     }
-
     public record Thumbnails(List<Dimension> sizes, int jpegQuality) {
         public Thumbnails {
             if (sizes == null || sizes.isEmpty()) {
@@ -35,7 +30,6 @@ public record MediaProperties(
             }
         }
     }
-
     public record Cleanup(Duration interval, int batchSize) {
         public Cleanup {
             if (interval == null) {

@@ -1,5 +1,4 @@
 package {{package}}.file.infrastructure.storage;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -14,11 +13,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.concurrent.CompletableFuture;
-
 public class LocalFilesystemStorage implements MediaStorage {
-
     private final Path baseDir;
-
     public LocalFilesystemStorage(Path baseDir) {
         this.baseDir = baseDir;
         try {
@@ -27,7 +23,6 @@ public class LocalFilesystemStorage implements MediaStorage {
             throw new IllegalStateException("Cannot create media storage dir: " + baseDir, e);
         }
     }
-
     @Override
     public CompletableFuture<Void> putAsync(String key, InputStream content, long contentLength, String contentType) {
         Path target = resolve(key);
@@ -49,7 +44,6 @@ public class LocalFilesystemStorage implements MediaStorage {
         }
         return CompletableFuture.completedFuture(null);
     }
-
     @Override
     public MediaObject get(String key) {
         Path target = resolve(key);
@@ -67,7 +61,6 @@ public class LocalFilesystemStorage implements MediaStorage {
             throw new UncheckedIOException("Failed to read media key: " + key, e);
         }
     }
-
     private String readSidecarChecksum(Path target) {
         Path sidecar = target.resolveSibling(target.getFileName() + ".sha256");
         if (Files.exists(sidecar)) {
@@ -79,7 +72,6 @@ public class LocalFilesystemStorage implements MediaStorage {
         }
         return "";
     }
-
     private void writeSidecarChecksum(Path target, String checksum) {
         Path sidecar = target.resolveSibling(target.getFileName() + ".sha256");
         try {
@@ -87,12 +79,10 @@ public class LocalFilesystemStorage implements MediaStorage {
         } catch (IOException e) {
         }
     }
-
     @Override
     public boolean exists(String key) {
         return Files.exists(resolve(key));
     }
-
     @Override
     public void delete(String key) {
         try {
@@ -101,17 +91,14 @@ public class LocalFilesystemStorage implements MediaStorage {
             throw new UncheckedIOException("Failed to delete media key: " + key, e);
         }
     }
-
     @Override
     public URI presignedPutUrl(String key, Duration ttl, String contentType) {
         throw new UnsupportedOperationException("Local filesystem storage does not support presigned URLs");
     }
-
     @Override
     public URI presignedGetUrl(String key, Duration ttl) {
         throw new UnsupportedOperationException("Local filesystem storage does not support presigned URLs");
     }
-
     private Path resolve(String key) {
         Path p = baseDir.resolve(key).normalize();
         if (!p.startsWith(baseDir)) {

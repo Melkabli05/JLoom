@@ -1,5 +1,4 @@
 package {{package}}.file.presentation.controller;
-
 import {{package}}.file.application.service.MediaService;
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaPurpose;
@@ -25,25 +24,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.UUID;
-
 @RestController
 @RequestMapping("/media")
 class MediaController {
-
     private final MediaService service;
     private final MediaMapper mapper;
     private final String adminAuthority;
-
     MediaController(MediaService service, MediaMapper mapper, MediaProperties mediaProperties) {
         this.service = service;
         this.mapper = mapper;
         this.adminAuthority = mediaProperties.adminAuthority();
     }
-
     @PostMapping("/uploads")
     @PreAuthorize("isAuthenticated()")
     ResponseEntity<MediaUploadResponse> upload(
@@ -62,7 +56,6 @@ class MediaController {
                 idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toUploadResponse(asset));
     }
-
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     ResponseEntity<Resource> download(
@@ -86,11 +79,9 @@ class MediaController {
                 asset.getSizeBytes(), cacheControl(asset.getVisibility()),
                 object, rangeHeader);
     }
-
     private static String cacheControl(MediaVisibility visibility) {
         return visibility == MediaVisibility.PUBLIC ? "public, max-age=3600" : "private, max-age=3600";
     }
-
     private static boolean hasAuthority(String authority, Collection<? extends GrantedAuthority> authorities) {
         if (authority == null || authority.isBlank()) return false;
         String bare = authority.startsWith("ROLE_") ? authority.substring(5) : authority;

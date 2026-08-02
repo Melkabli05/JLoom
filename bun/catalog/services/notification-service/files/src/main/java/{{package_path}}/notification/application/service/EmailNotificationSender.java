@@ -1,5 +1,4 @@
 package {{package}}.notification.application.service;
-
 import {{package}}.notification.domain.model.FailureReason;
 import {{package}}.notification.domain.model.NotificationChannel;
 import {{package}}.notification.infrastructure.persistence.NotificationRepository;
@@ -17,21 +16,16 @@ import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-
 import java.time.Clock;
 import java.util.UUID;
-
 @Component
 class EmailNotificationSender implements NotificationSender {
-
     private static final Logger log = LoggerFactory.getLogger(EmailNotificationSender.class);
-
     private final MailSender mailSender;
     private final NotificationRepository repository;
     private final Clock clock;
     private final MeterRegistry meterRegistry;
     private final RetryTemplate retryTemplate;
-
     EmailNotificationSender(MailSender mailSender, NotificationRepository repository, Clock clock,
                              MeterRegistry meterRegistry, RetryTemplate emailDeliveryRetryTemplate) {
         this.mailSender = mailSender;
@@ -40,12 +34,10 @@ class EmailNotificationSender implements NotificationSender {
         this.meterRegistry = meterRegistry;
         this.retryTemplate = emailDeliveryRetryTemplate;
     }
-
     @Override
     public NotificationChannel channel() {
         return NotificationChannel.EMAIL;
     }
-
     @Override
     @Async
     public void deliver(UUID notificationId, String recipientEmail, String subject, String body) {
@@ -58,7 +50,6 @@ class EmailNotificationSender implements NotificationSender {
             sample.stop(meterRegistry.timer("notification.delivery.duration", "channel", "EMAIL"));
         }
     }
-
     private boolean attemptSend(UUID notificationId, String recipientEmail, String subject, String body) {
         try {
             retryTemplate.invoke(() -> mailSender.send(toMailMessage(recipientEmail, subject, body)));
@@ -71,7 +62,6 @@ class EmailNotificationSender implements NotificationSender {
             return false;
         }
     }
-
     private static SimpleMailMessage toMailMessage(String recipientEmail, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(recipientEmail);
@@ -79,7 +69,6 @@ class EmailNotificationSender implements NotificationSender {
         message.setText(body);
         return message;
     }
-
     private static FailureReason classify(MailException e) {
         return switch (e) {
             case MailAuthenticationException ex -> FailureReason.CONFIGURATION_FAILURE;
@@ -89,7 +78,6 @@ class EmailNotificationSender implements NotificationSender {
             default -> FailureReason.UNEXPECTED_FAILURE;
         };
     }
-
     private void recordFailure(UUID notificationId, FailureReason reason, Exception e) {
         markFailed(notificationId, reason);
         meterRegistry.counter("notification.failed", "channel", "EMAIL", "reason", reason.name()).increment();
@@ -99,7 +87,6 @@ class EmailNotificationSender implements NotificationSender {
             log.warn("Notification {} delivery failed: {} ({})", notificationId, reason, e.getClass().getSimpleName());
         }
     }
-
     private void recordSent(UUID notificationId) {
         try {
             markSent(notificationId);
@@ -108,14 +95,12 @@ class EmailNotificationSender implements NotificationSender {
             log.error("Notification {} was delivered but recording it as SENT failed", notificationId, e);
         }
     }
-
     void markSent(UUID notificationId) {
         repository.findById(notificationId).ifPresent(n -> {
             n.markSent(clock.instant());
             repository.save(n);
         });
     }
-
     void markFailed(UUID notificationId, FailureReason reason) {
         repository.findById(notificationId).ifPresent(n -> {
             n.markFailed(reason);

@@ -1,37 +1,31 @@
 package {{package}}.identity;
-
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
-// Thin wrapper around Spring Security's own JwtEncoder (see IdentityConfig for the RSA
-// key/JWKSource wiring). Verification is no longer this class's job at all — identity-service
-// validates its own issued tokens the same way every other service does: through jwt-auth's
-// SecurityConfig/SecurityFilterChain against the published JWKS.
-public class JwtIssuer {
 
+
+
+
+public class JwtIssuer {
     private final JwtEncoder encoder;
     private final String issuer;
     private final long ttlSeconds;
     private final Clock clock;
-
     public JwtIssuer(JwtEncoder encoder, String issuer, long ttlSeconds, Clock clock) {
         this.encoder = encoder;
         this.issuer = issuer;
         this.ttlSeconds = ttlSeconds;
         this.clock = clock;
     }
-
     public String issue(String subject) {
         return issue(subject, List.of());
     }
-
     public String issue(String subject, List<String> roles) {
         Instant now = clock.instant();
         JwtClaimsSet.Builder claims = JwtClaimsSet.builder()

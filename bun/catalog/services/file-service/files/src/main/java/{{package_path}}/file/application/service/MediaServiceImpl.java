@@ -1,5 +1,4 @@
 package {{package}}.file.application.service;
-
 import {{package}}.file.application.exception.PayloadTooLargeException;
 import {{package}}.file.application.exception.PresignUnsupportedException;
 import {{package}}.file.application.exception.UnsupportedMediaTypeException;
@@ -20,7 +19,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -32,20 +30,16 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
-
 @Service
 class MediaServiceImpl implements MediaService {
-
     private static final Logger log = LoggerFactory.getLogger(MediaServiceImpl.class);
     private static final int PEEK_SIZE = 16;
-
     private final MediaAssetRepository repository;
     private final MediaStorage storage;
     private final MediaValidator validator;
     private final ThumbnailGenerator thumbnailGenerator;
     private final MediaStorageProperties storageProperties;
     private final Clock clock;
-
     MediaServiceImpl(MediaAssetRepository repository, MediaStorage storage,
                      MediaValidator validator, ThumbnailGenerator thumbnailGenerator,
                      MediaStorageProperties storageProperties, Clock clock) {
@@ -56,7 +50,6 @@ class MediaServiceImpl implements MediaService {
         this.storageProperties = storageProperties;
         this.clock = clock;
     }
-
     @Override
     @Transactional
     public MediaAsset upload(UUID ownerId, MediaPurpose purpose, MediaVisibility visibility,
@@ -70,9 +63,7 @@ class MediaServiceImpl implements MediaService {
                 return existing.get();
             }
         }
-
         long maxBytes = storageProperties.maxFileSize().toBytes();
-
         byte[] peek = new byte[PEEK_SIZE];
         int peekRead = 0;
         try {
@@ -84,26 +75,22 @@ class MediaServiceImpl implements MediaService {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read upload body for sniffing", e);
         }
-
         String sniffedContentType = validator.matchSniffed(peek, peekRead);
         if (sniffedContentType == null || !validator.allowedContentTypes().contains(sniffedContentType)) {
             throw new UnsupportedMediaTypeException(
                     claimedContentType != null ? claimedContentType : "unknown",
                     validator.allowedContentTypes());
         }
-
         byte[] prefix = new byte[peekRead];
         System.arraycopy(peek, 0, prefix, 0, peekRead);
         InputStream bounded = new SizeLimitedInputStream(
                 new SequenceInputStream(new ByteArrayInputStream(prefix), content), maxBytes);
-
         String key = MediaKeyFactory.forUpload(purpose, originalFilename);
         Instant now = clock.instant();
         MediaAsset asset = new MediaAsset(
                 UUID.randomUUID(), key, sniffedContentType, 0L, "",
                 ownerId, purpose.name(), visibility,
                 MediaAssetStatus.PENDING, originalFilename, now, null, null, null);
-
         try {
             storage.putAsync(key, bounded, contentLength, sniffedContentType).join();
             asset.setStatus(MediaAssetStatus.AVAILABLE);
@@ -121,7 +108,6 @@ class MediaServiceImpl implements MediaService {
             }
             throw e;
         }
-
         MediaAsset saved;
         try {
             saved = repository.save(asset);
@@ -136,19 +122,16 @@ class MediaServiceImpl implements MediaService {
             }
             throw e;
         }
-
         if (isImage(saved.getContentType())) {
             thumbnailGenerator.generate(saved.getId());
         }
         return saved;
     }
-
     @Override
     @Transactional(readOnly = true)
     public Optional<MediaAsset> find(UUID id) {
         return repository.findById(id);
     }
-
     @Override
     @Transactional(readOnly = true)
     public MediaObject download(UUID id) {
@@ -158,7 +141,6 @@ class MediaServiceImpl implements MediaService {
         return new MediaObject(object.content(), object.contentType(),
                 object.sizeBytes(), asset.getChecksum());
     }
-
     @Override
     public URI presignPut(UUID ownerId, MediaPurpose purpose, MediaVisibility visibility,
                           String contentType, String originalFilename) {
@@ -169,7 +151,6 @@ class MediaServiceImpl implements MediaService {
             throw new PresignUnsupportedException("Presigned URLs require MinIO storage");
         }
     }
-
     @Override
     @Transactional
     public int purgeExpired(Instant cutoff, int batchSize) {
@@ -191,34 +172,28 @@ class MediaServiceImpl implements MediaService {
         }
         return deleted;
     }
-
     private static boolean isImage(String contentType) {
         return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png")
                 || contentType.equals("image/webp") || contentType.equals("image/gif"));
     }
-
     private static final class SizeLimitedInputStream extends FilterInputStream {
         private final long maxBytes;
         private long count;
-
         SizeLimitedInputStream(InputStream in, long maxBytes) {
             super(in);
             this.maxBytes = maxBytes;
         }
-
         private void check() {
             if (count > maxBytes) {
                 throw new PayloadTooLargeException("Upload exceeds " + maxBytes + " bytes");
             }
         }
-
         @Override
         public int read() throws IOException {
             int b = super.read();
             if (b >= 0) { count++; check(); }
             return b;
         }
-
         @Override
         public int read(byte[] b, int off, int len) throws IOException {
             int n = super.read(b, off, len);

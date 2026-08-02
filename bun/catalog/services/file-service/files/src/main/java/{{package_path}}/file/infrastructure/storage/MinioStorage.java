@@ -1,5 +1,4 @@
 package {{package}}.file.infrastructure.storage;
-
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -8,22 +7,17 @@ import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
-
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-
 public class MinioStorage implements MediaStorage {
-
     private final MinioClient client;
     private final String bucket;
-
     public MinioStorage(MinioClient client, String bucket) {
         this.client = client;
         this.bucket = bucket;
     }
-
     @Override
     public CompletableFuture<Void> putAsync(String key, InputStream content, long contentLength, String contentType) {
         try {
@@ -40,7 +34,6 @@ public class MinioStorage implements MediaStorage {
         }
         return CompletableFuture.completedFuture(null);
     }
-
     @Override
     public MediaObject get(String key) {
         try {
@@ -57,7 +50,6 @@ public class MinioStorage implements MediaStorage {
             throw new MediaStorageException("MinIO get failed for " + key, e);
         }
     }
-
     @Override
     public boolean exists(String key) {
         try {
@@ -69,7 +61,6 @@ public class MinioStorage implements MediaStorage {
             return false;
         }
     }
-
     @Override
     public void delete(String key) {
         try {
@@ -78,7 +69,6 @@ public class MinioStorage implements MediaStorage {
             throw new MediaStorageException("MinIO delete failed for " + key, e);
         }
     }
-
     @Override
     public URI presignedPutUrl(String key, Duration ttl, String contentType) {
         try {
@@ -91,7 +81,6 @@ public class MinioStorage implements MediaStorage {
             throw new MediaStorageException("MinIO presign PUT failed for " + key, e);
         }
     }
-
     @Override
     public URI presignedGetUrl(String key, Duration ttl) {
         try {

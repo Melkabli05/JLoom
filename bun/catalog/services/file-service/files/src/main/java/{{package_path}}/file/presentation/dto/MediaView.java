@@ -1,12 +1,9 @@
 package {{package}}.file.presentation.dto;
-
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaAssetStatus;
 import {{package}}.file.domain.model.MediaVisibility;
-
 import java.time.Instant;
 import java.util.UUID;
-
 public record MediaView(
         UUID id,
         String key,

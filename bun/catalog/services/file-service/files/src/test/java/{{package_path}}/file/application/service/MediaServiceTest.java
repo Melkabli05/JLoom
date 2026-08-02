@@ -1,5 +1,4 @@
 package {{package}}.file.application.service;
-
 import {{package}}.file.application.exception.UnsupportedMediaTypeException;
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaAssetStatus;
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.retry.RetryPolicy;
 import org.springframework.core.retry.RetryTemplate;
 import org.springframework.util.unit.DataSize;
-
 import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -29,7 +27,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,17 +35,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 class MediaServiceTest {
-
     @TempDir
     Path tempDir;
-
     private MediaStorage storage;
     private MediaAssetRepository repository;
     private MediaServiceImpl service;
     private ThumbnailGenerator thumbnailGenerator;
-
     @BeforeEach
     void setUp() {
         storage = new LocalFilesystemStorage(tempDir);
@@ -66,7 +59,6 @@ class MediaServiceTest {
                 thumbnailGenerator, storageProperties,
                 Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
     }
-
     @Test
     void uploadPersistsAndReturnsAsset() {
         when(repository.findFirstByOwnerIdAndPurposeAndIdempotencyKeyAndStatusNot(any(), anyString(), anyString(), any()))
@@ -75,11 +67,9 @@ class MediaServiceTest {
         MediaAsset asset = service.upload(UUID.randomUUID(), MediaPurpose.USER_AVATAR,
                 MediaVisibility.PRIVATE, "avatar.png", new ByteArrayInputStream(body),
                 body.length, "image/png", null);
-
         assertThat(asset.getStatus()).isEqualTo(MediaAssetStatus.AVAILABLE);
         assertThat(asset.getContentType()).isEqualTo("image/png");
     }
-
     @Test
     void uploadRejectsUnsupportedContentType() {
         byte[] body = new byte[]{0x00, 0x01, 0x02, 0x03};
@@ -88,20 +78,17 @@ class MediaServiceTest {
                 body.length, "application/x-unknown", null))
                 .isInstanceOf(UnsupportedMediaTypeException.class);
     }
-
     @Test
     void findReturnsEmptyForUnknownId() {
         when(repository.findById(any(UUID.class))).thenReturn(Optional.empty());
         assertThat(service.find(UUID.randomUUID())).isEmpty();
     }
-
     @Test
     void downloadThrowsMediaNotFoundForUnknownId() {
         when(repository.findById(any(UUID.class))).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.download(UUID.randomUUID()))
                 .isInstanceOf(MediaNotFoundException.class);
     }
-
     @Test
     void purgeExpiredDelegatesToRepository() {
         when(repository.findByExpiresAtBeforeAndStatusNot(any(), any(), any()))
@@ -109,7 +96,6 @@ class MediaServiceTest {
         int deleted = service.purgeExpired(Instant.parse("2026-06-01T00:00:00Z"), 100);
         assertThat(deleted).isZero();
     }
-
     private ThumbnailGenerator noOpThumbnailGenerator() {
         RetryPolicy noRetry = RetryPolicy.builder().maxRetries(0).build();
         MeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -120,7 +106,6 @@ class MediaServiceTest {
             }
         };
     }
-
     private byte[] pngBytes() {
         return new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0};
     }

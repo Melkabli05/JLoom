@@ -2,30 +2,25 @@ import yaml from "js-yaml";
 import { existsSync, globSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { readText, type ModuleManifest } from "./catalog.ts";
-
 export type MergeOp =
   | { kind: "AddDependency"; groupId: string; artifactId: string; version?: string; configuration: string }
   | { kind: "MergeYaml"; key: string; yaml: string; filePattern: string }
   | { kind: "ChangePropertyKey"; oldPropertyKey: string; newPropertyKey: string; filePattern: string }
   | { kind: "CreateTextFile"; relativeFileName: string; fileContents: string; overwriteExisting: boolean };
-
 export function substitute(text: string, tokens: Record<string, string>): string {
   let out = text;
   for (const [k, v] of Object.entries(tokens)) out = out.split(`{{${k}}}`).join(v);
   return out;
 }
-
 export interface ModuleSelection {
   manifest: ModuleManifest;
   answers: Record<string, string>;
 }
-
 export interface UpgradeStep {
   moduleId: string;
   recipeResourcePath: string;
   answers: Record<string, string>;
 }
-
 export function compose(modules: ModuleSelection[]): MergeOp[] {
   return composeFragments(
     modules.map((s) => ({
@@ -35,7 +30,6 @@ export function compose(modules: ModuleSelection[]): MergeOp[] {
     })),
   );
 }
-
 export function composeUpgrade(steps: UpgradeStep[]): MergeOp[] {
   return composeFragments(
     steps.map((s) => ({
@@ -45,7 +39,6 @@ export function composeUpgrade(steps: UpgradeStep[]): MergeOp[] {
     })),
   );
 }
-
 function composeFragments(fragments: { moduleId: string; resourcePaths: string[]; answers: Record<string, string> }[]): MergeOp[] {
   const operations: MergeOp[] = [];
   for (const fragment of fragments) {
@@ -63,7 +56,6 @@ function composeFragments(fragments: { moduleId: string; resourcePaths: string[]
   }
   return operations;
 }
-
 function readFragment(moduleId: string, resourcePath: string): string {
   const text = readText(moduleId, resourcePath);
   if (text === undefined) {
@@ -71,7 +63,6 @@ function readFragment(moduleId: string, resourcePath: string): string {
   }
   return text;
 }
-
 function parseOperation(moduleId: string, resourcePath: string, entry: unknown): MergeOp {
   if (entry === null || typeof entry !== "object") {
     throw new Error(`Fragment ${moduleId}/${resourcePath} contains a non-map entry: ${String(entry)}`);
@@ -82,7 +73,6 @@ function parseOperation(moduleId: string, resourcePath: string, entry: unknown):
   }
   const recipeType = keys[0]!;
   const params = (entry as Record<string, unknown>)[recipeType] as Record<string, unknown>;
-
   switch (recipeType) {
     case "org.openrewrite.gradle.AddDependency":
       return {
@@ -117,7 +107,6 @@ function parseOperation(moduleId: string, resourcePath: string, entry: unknown):
       throw new Error(`Fragment ${moduleId}/${resourcePath} uses unsupported recipe type: ${recipeType}`);
   }
 }
-
 export function applyOperations(root: string, ops: MergeOp[]): void {
   for (const op of ops) {
     switch (op.kind) {
@@ -136,9 +125,7 @@ export function applyOperations(root: string, ops: MergeOp[]): void {
     }
   }
 }
-
 const DEPENDENCIES_BLOCK = /dependencies\s*\{/;
-
 function applyAddDep(root: string, op: { groupId: string; artifactId: string; version?: string; configuration: string }): void {
   const buildFile = findBuildFile(root);
   const content = readFileSync(buildFile, "utf8");
@@ -154,7 +141,6 @@ function applyAddDep(root: string, op: { groupId: string; artifactId: string; ve
   const line = `\n    ${op.configuration}("${coordinate}${versionSuffix}")`;
   writeFileSync(buildFile, content.slice(0, insertAt) + line + content.slice(insertAt), "utf8");
 }
-
 function findBuildFile(root: string): string {
   for (const candidate of ["build.gradle.kts", "build.gradle"]) {
     const full = path.join(root, candidate);
@@ -162,22 +148,18 @@ function findBuildFile(root: string): string {
   }
   throw new Error(`No build.gradle.kts or build.gradle found under ${root}`);
 }
-
 function applyMergeYaml(root: string, op: { key: string; yaml: string; filePattern: string }): void {
   for (const file of filesMatching(root, op.filePattern)) {
     const content = existsSync(file) ? readFileSync(file, "utf8") : "";
     writeFileSync(file, mergeYamlContent(content, op), "utf8");
   }
 }
-
 function filesMatching(root: string, filePattern: string): string[] {
   return globSync(filePattern, { cwd: root }).map((rel) => path.join(root, rel));
 }
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-
 function pathSegments(key: string): string[] {
   if (key === "$") return [];
   if (!key.startsWith("$.")) {
@@ -185,7 +167,6 @@ function pathSegments(key: string): string[] {
   }
   return key.slice(2).split(".");
 }
-
 function deepMerge(target: unknown, source: unknown): unknown {
   if (isPlainObject(target) && isPlainObject(source)) {
     const result: Record<string, unknown> = { ...target };
@@ -196,7 +177,6 @@ function deepMerge(target: unknown, source: unknown): unknown {
   }
   return source;
 }
-
 function mergeAtPath(target: Record<string, unknown>, segments: string[], fragment: unknown): Record<string, unknown> {
   if (segments.length === 0) return deepMerge(target, fragment) as Record<string, unknown>;
   const [head, ...rest] = segments as [string, ...string[]];
@@ -204,7 +184,6 @@ function mergeAtPath(target: Record<string, unknown>, segments: string[], fragme
   const child = isPlainObject(existing) ? existing : {};
   return { ...target, [head]: mergeAtPath(child, rest, fragment) };
 }
-
 function mergeYamlContent(targetContent: string, op: { key: string, yaml: string }): string {
   const loaded = yaml.load(targetContent);
   const targetDoc = isPlainObject(loaded) ? loaded : {};
@@ -213,14 +192,14 @@ function mergeYamlContent(targetContent: string, op: { key: string, yaml: string
   return yaml.dump(merged, { lineWidth: -1 });
 }
 
-// js-yaml's strict parser rejects YAML documents whose first non-empty line starts with `%`,
-// treating it as a directive-end marker. Two of jloom's catalog recipes legitimately want such
-// values — Spring Boot's `logging.pattern.level` log pattern (`%5p [...]`) is the canonical
-// example, where `%5p` is the log level token. Detect this case and reparse as a key/value
-// pair (the recipe's key becomes the JSON-encoded value's parent key), which carries the value
-// as a string-typed field and bypasses the directive-marker check entirely. The wrapper key is
-// then unwrapped before returning so mergeAtPath lands the value (not a wrapping object) at the
-// leaf path the recipe's `key` field declared.
+
+
+
+
+
+
+
+
 function parseFragmentYaml(text: string, opKey: string): unknown {
   const tryLoad = (t: string) => yaml.load(t);
   let parsed: unknown;
@@ -235,8 +214,8 @@ function parseFragmentYaml(text: string, opKey: string): unknown {
       throw new Error(`Failed to parse YAML fragment for recipe key '${opKey}'`);
     }
   }
-  // Unwrap the single-key wrapper we used to defeat the directive-marker check, so the fragment
-  // is the leaf value itself rather than `{leaf: value}`.
+
+
   const leaf = opKey.split(".").pop() ?? "value";
   if (
     typeof parsed === "object" &&
@@ -249,14 +228,12 @@ function parseFragmentYaml(text: string, opKey: string): unknown {
   }
   return parsed;
 }
-
 function applyChangeKey(root: string, op: { oldPropertyKey: string; newPropertyKey: string; filePattern: string }): void {
   for (const file of filesMatching(root, op.filePattern)) {
     const content = readFileSync(file, "utf8");
     writeFileSync(file, changeKeyContent(content, op), "utf8");
   }
 }
-
 function changeKeyContent(targetContent: string, op: { oldPropertyKey: string; newPropertyKey: string }): string {
   const loaded = yaml.load(targetContent);
   const doc = isPlainObject(loaded) ? loaded : {};
@@ -268,7 +245,6 @@ function changeKeyContent(targetContent: string, op: { oldPropertyKey: string; n
   const withNew = setAtPath(withoutOld, newSegments, value);
   return yaml.dump(withNew, { lineWidth: -1 });
 }
-
 function getAtPath(node: unknown, segments: string[]): unknown {
   let cursor = node;
   for (const segment of segments) {
@@ -277,7 +253,6 @@ function getAtPath(node: unknown, segments: string[]): unknown {
   }
   return cursor;
 }
-
 function deleteAtPath(node: Record<string, unknown>, segments: string[]): Record<string, unknown> {
   const [head, ...rest] = segments as [string, ...string[]];
   if (!(head in node)) return node;
@@ -290,7 +265,6 @@ function deleteAtPath(node: Record<string, unknown>, segments: string[]): Record
   if (!isPlainObject(child)) return node;
   return { ...node, [head]: deleteAtPath(child, rest) };
 }
-
 function setAtPath(node: Record<string, unknown>, segments: string[], value: unknown): Record<string, unknown> {
   const [head, ...rest] = segments as [string, ...string[]];
   if (rest.length === 0) return { ...node, [head]: value };
@@ -298,7 +272,6 @@ function setAtPath(node: Record<string, unknown>, segments: string[], value: unk
   const childObj = isPlainObject(child) ? child : {};
   return { ...node, [head]: setAtPath(childObj, rest, value) };
 }
-
 function applyCreateFile(root: string, op: { relativeFileName: string; fileContents: string; overwriteExisting: boolean }): void {
   const target = path.join(root, op.relativeFileName);
   if (existsSync(target) && !op.overwriteExisting) return;

@@ -1,5 +1,4 @@
 package {{package}}.user.presentation.controller;
-
 import {{package}}.user.application.service.UserService;
 import {{package}}.user.presentation.dto.VerifyCredentialsRequest;
 import {{package}}.user.presentation.dto.VerifyCredentialsResponse;
@@ -13,21 +12,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 @RestController
 @RequestMapping("/internal/users")
 class InternalUserController {
-
     private final UserService service;
     private final String serviceKey;
     private final UserMapper mapper;
-
     InternalUserController(UserService service, @Value("${internal.service-key:}") String serviceKey, UserMapper mapper) {
         this.service = service;
         this.serviceKey = serviceKey;
         this.mapper = mapper;
     }
-
     @PostMapping("/verify-credentials")
     ResponseEntity<VerifyCredentialsResponse> verifyCredentials(
             @RequestHeader(value = "X-Internal-Service-Key", required = false) String providedKey,

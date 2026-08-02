@@ -1,12 +1,11 @@
 import yaml from "js-yaml";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-
 const ROOTS = ["modules", "services"];
 
-// In a compiled standalone binary (bun build --compile), process.execPath is the binary's
-// path and the catalog sits next to it (copied by the `compile` npm script). In dev
-// runtime mode, process.execPath is the Bun runtime, so fall back to import.meta.dirname.
+
+
+
 function findCatalogRoot(): string {
   const isCompiled = process.execPath && !process.execPath.endsWith("bun") && !process.execPath.endsWith("/bun");
   if (isCompiled) {
@@ -15,9 +14,7 @@ function findCatalogRoot(): string {
   }
   return path.join(import.meta.dirname, "..", "catalog");
 }
-
 export const CATALOG_ROOT = findCatalogRoot();
-
 export function resolvePath(id: string, relativePath: string): string | undefined {
   for (const root of ROOTS) {
     const candidate = path.join(CATALOG_ROOT, root, id, relativePath);
@@ -25,33 +22,27 @@ export function resolvePath(id: string, relativePath: string): string | undefine
   }
   return undefined;
 }
-
 export function readText(id: string, relativePath: string): string | undefined {
   const resolved = resolvePath(id, relativePath);
   return resolved === undefined ? undefined : readFileSync(resolved, "utf8");
 }
-
 export function readBytes(id: string, relativePath: string): Buffer | undefined {
   const resolved = resolvePath(id, relativePath);
   return resolved === undefined ? undefined : readFileSync(resolved);
 }
-
 export function catalogRoot(): string {
   return CATALOG_ROOT;
 }
-
 export interface Prompt {
   key: string;
   type: "string" | "secret";
   defaultValue?: string;
 }
-
 export interface Upgrade {
   from: string;
   to: string;
   recipe: string;
 }
-
 export interface ModuleManifest {
   id: string;
   version: string;
@@ -64,22 +55,18 @@ export interface ModuleManifest {
   upgrades: Upgrade[];
   scaffold: boolean;
 }
-
 export interface ServiceManifest {
   id: string;
   displayName: string;
   description: string;
   modules: string[];
 }
-
 export interface ArchetypeManifest {
   id: string;
   modules: string[];
   answers: Record<string, string>;
 }
-
 export class ManifestParseError extends Error {}
-
 function requireString(raw: Record<string, unknown>, key: string): string {
   const value = raw[key];
   if (value === undefined || value === null) {
@@ -87,25 +74,21 @@ function requireString(raw: Record<string, unknown>, key: string): string {
   }
   return String(value);
 }
-
 function stringList(raw: unknown): string[] {
   if (raw === undefined || raw === null) return [];
   if (Array.isArray(raw)) return raw.map(String);
   throw new ManifestParseError(`expected a YAML list, got: ${typeof raw}`);
 }
-
 function parseModuleManifest(raw: unknown): ModuleManifest {
   if (raw === null || raw === undefined || typeof raw !== "object") {
     throw new ManifestParseError("module.yml is empty");
   }
   const obj = raw as Record<string, unknown>;
-
   const id = requireString(obj, "id");
   const version = requireString(obj, "version");
   const requires = stringList(obj.requires);
   const conflicts = stringList(obj.conflicts);
   const provides = obj.provides === undefined || obj.provides === null ? undefined : String(obj.provides);
-
   const prompts: Prompt[] = [];
   if (Array.isArray(obj.prompts)) {
     for (const item of obj.prompts) {
@@ -123,10 +106,8 @@ function parseModuleManifest(raw: unknown): ModuleManifest {
       }
     }
   }
-
   const mergeRecipes = stringList(obj.mergeRecipes);
   const fileTemplates = stringList(obj.fileTemplates);
-
   const upgrades: Upgrade[] = [];
   if (Array.isArray(obj.upgrades)) {
     for (const item of obj.upgrades) {
@@ -140,18 +121,14 @@ function parseModuleManifest(raw: unknown): ModuleManifest {
       }
     }
   }
-
   const scaffold = obj.scaffold === true;
-
   return { id, version, requires, conflicts, provides, prompts, mergeRecipes, fileTemplates, upgrades, scaffold };
 }
-
 export interface Catalog {
   modules: Map<string, ModuleManifest>;
   services: Map<string, ServiceManifest>;
   archetypes: Map<string, ArchetypeManifest>;
 }
-
 function loadIndexModules(): Map<string, ModuleManifest> {
   const byId = new Map<string, ModuleManifest>();
   for (const root of ROOTS) {
@@ -175,7 +152,6 @@ function loadIndexModules(): Map<string, ModuleManifest> {
   }
   return byId;
 }
-
 function loadServices(): Map<string, ServiceManifest> {
   const byId = new Map<string, ServiceManifest>();
   const indexPath = path.join(CATALOG_ROOT, "services.yml");
@@ -196,7 +172,6 @@ function loadServices(): Map<string, ServiceManifest> {
   }
   return byId;
 }
-
 function loadArchetypes(): Map<string, ArchetypeManifest> {
   const byId = new Map<string, ArchetypeManifest>();
   const dir = path.join(CATALOG_ROOT, "archetypes");
@@ -221,7 +196,6 @@ function loadArchetypes(): Map<string, ArchetypeManifest> {
   }
   return byId;
 }
-
 export function loadCatalog(): Catalog {
   return {
     modules: loadIndexModules(),
@@ -229,9 +203,7 @@ export function loadCatalog(): Catalog {
     archetypes: loadArchetypes(),
   };
 }
-
 export const catalog = loadCatalog();
-
 export function findUpgradePath(catalog: Catalog, moduleId: string, fromVersion: string): Upgrade[] {
   const manifest = catalog.modules.get(moduleId);
   if (manifest === undefined) {
@@ -251,7 +223,6 @@ export function findUpgradePath(catalog: Catalog, moduleId: string, fromVersion:
   }
   return path;
 }
-
 export function validate(catalog: Catalog, alreadyApplied: string[], toApply: string[]): string[] {
   const problems: string[] = [];
   for (let i = 0; i < toApply.length; i++) {
@@ -281,7 +252,6 @@ export function validate(catalog: Catalog, alreadyApplied: string[], toApply: st
   }
   return problems;
 }
-
 function isSatisfied(catalog: Catalog, requirement: string, effectiveModuleIds: string[]): boolean {
   if (requirement.startsWith("capability:")) {
     return effectiveModuleIds.some((id) => {

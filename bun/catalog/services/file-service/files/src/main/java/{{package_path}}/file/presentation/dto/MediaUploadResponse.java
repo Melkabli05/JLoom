@@ -1,10 +1,7 @@
 package {{package}}.file.presentation.dto;
-
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaAssetStatus;
-
 import java.util.UUID;
-
 public record MediaUploadResponse(
         UUID id,
         String key,

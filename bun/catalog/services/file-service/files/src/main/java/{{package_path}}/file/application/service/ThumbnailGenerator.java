@@ -1,5 +1,4 @@
 package {{package}}.file.application.service;
-
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.infrastructure.configuration.MediaProperties;
 import {{package}}.file.infrastructure.persistence.MediaAssetRepository;
@@ -15,7 +14,6 @@ import org.springframework.core.retry.RetryTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -25,20 +23,15 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import javax.imageio.ImageIO;
-
 @Component
 public class ThumbnailGenerator {
-
     private static final Logger log = LoggerFactory.getLogger(ThumbnailGenerator.class);
-
     private final MediaAssetRepository repository;
     private final MediaStorage storage;
     private final MediaProperties mediaProperties;
     private final RetryTemplate retryTemplate;
     private final MeterRegistry meterRegistry;
-
     public ThumbnailGenerator(MediaAssetRepository repository, MediaStorage storage,
                               MediaProperties mediaProperties, RetryTemplate thumbnailGenerationRetryTemplate,
                               MeterRegistry meterRegistry) {
@@ -48,7 +41,6 @@ public class ThumbnailGenerator {
         this.retryTemplate = thumbnailGenerationRetryTemplate;
         this.meterRegistry = meterRegistry;
     }
-
     @Async
     @Transactional
     public void generate(UUID mediaAssetId) {
@@ -70,11 +62,9 @@ public class ThumbnailGenerator {
             sample.stop(meterRegistry.timer("media.thumbnail.duration"));
         }
     }
-
     private void doGenerate(UUID mediaAssetId) throws IOException {
         MediaAsset asset = repository.findById(mediaAssetId).orElse(null);
         if (asset == null) return;
-
         MediaObject original = storage.get(asset.getStorageKey());
         try (InputStream in = original.content()) {
             BufferedImage image = ImageIO.read(in);

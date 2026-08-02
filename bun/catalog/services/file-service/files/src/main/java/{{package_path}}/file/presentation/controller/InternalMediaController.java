@@ -1,5 +1,4 @@
 package {{package}}.file.presentation.controller;
-
 import {{package}}.file.application.service.MediaService;
 import {{package}}.file.domain.model.MediaAsset;
 import {{package}}.file.domain.model.MediaPurpose;
@@ -24,21 +23,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
-
 @RestController
 @RequestMapping("/internal/media")
 class InternalMediaController {
-
     private final MediaService service;
     private final MediaMapper mapper;
     private final MediaStorageProperties storageProperties;
     private final String serviceKey;
-
     InternalMediaController(MediaService service, MediaMapper mapper,
                             MediaStorageProperties storageProperties,
                             @Value("${internal.service-key:}") String serviceKey) {
@@ -47,7 +42,6 @@ class InternalMediaController {
         this.storageProperties = storageProperties;
         this.serviceKey = serviceKey;
     }
-
     @PostMapping("/uploads")
     ResponseEntity<MediaUploadResponse> upload(
             @RequestHeader(value = "X-Internal-Service-Key", required = false) String providedKey,
@@ -66,7 +60,6 @@ class InternalMediaController {
                 null);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toUploadResponse(asset));
     }
-
     @PostMapping("/presign")
     ResponseEntity<PresignedUploadResponse> presign(
             @RequestHeader(value = "X-Internal-Service-Key", required = false) String providedKey,
@@ -84,7 +77,6 @@ class InternalMediaController {
                 url, path,
                 Instant.now().plus(storageProperties.minio().presignTtl())));
     }
-
     @GetMapping("/{id}")
     ResponseEntity<Resource> download(
             @RequestHeader(value = "X-Internal-Service-Key", required = false) String providedKey,

@@ -1,5 +1,4 @@
 package {{package}}.file.presentation.support;
-
 import {{package}}.file.infrastructure.storage.MediaObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -9,17 +8,13 @@ import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
-
 public final class MediaStreaming {
-
     private MediaStreaming() {
     }
-
     public static ResponseEntity<Resource> stream(String contentType, String originalFilename,
                                                   long sizeBytes, String cacheControl,
                                                   MediaObject object, String rangeHeader) {
@@ -33,13 +28,11 @@ public final class MediaStreaming {
             headers.setContentDisposition(ContentDisposition.inline()
                     .filename(originalFilename.replace("\"", "")).build());
         }
-
         if (rangeHeader == null || rangeHeader.isBlank()) {
             headers.setContentLength(sizeBytes);
             return ResponseEntity.ok().headers(headers)
                     .body(new InputStreamResource(object.content()));
         }
-
         List<HttpRange> ranges;
         try {
             ranges = HttpRange.parseRanges(rangeHeader);
@@ -62,7 +55,6 @@ public final class MediaStreaming {
                 .headers(headers)
                 .body(new InputStreamResource(skip(object.content(), start)));
     }
-
     private static InputStream skip(InputStream in, long n) {
         try {
             long skipped = in.skip(n);

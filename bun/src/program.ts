@@ -13,7 +13,6 @@ import {
   runStatus,
   upgrade,
 } from "./apply.ts";
-
 function parseSetFlag(value: string, previous: Record<string, string>): Record<string, string> {
   const result = { ...previous };
   for (const pair of value.split(",")) {
@@ -22,7 +21,6 @@ function parseSetFlag(value: string, previous: Record<string, string>): Record<s
   }
   return result;
 }
-
 function parseCapabilities(value: string): (typeof CAPABILITY_IDS)[number][] {
   const ids = value.split(",").map((s) => s.trim()).filter((s) => s !== "");
   for (const id of ids) {
@@ -33,9 +31,9 @@ function parseCapabilities(value: string): (typeof CAPABILITY_IDS)[number][] {
   return ids as (typeof CAPABILITY_IDS)[number][];
 }
 
-// exitOverride prevents Commander from process.exit-ing on parse errors, help, or version
-// display - cli.ts catches CommanderError itself. showHelpAfterError prints the full help text
-// on a parse error, which is what users expect by default.
+
+
+
 export function buildProgram(): Command {
   const program = new Command();
   program
@@ -44,7 +42,6 @@ export function buildProgram(): Command {
     .version("jloom 0.2.0")
     .exitOverride()
     .showHelpAfterError();
-
   program
     .command("new")
     .description("Create a new project. Generates immediately; pass --dry-run to preview.")
@@ -59,9 +56,9 @@ export function buildProgram(): Command {
     .option("-q, --quiet", "Suppress non-essential output.", false)
     .option("-y, --yes", "Skip the final confirmation prompt.", false)
     .action(async (opts, command) => {
-      // --base-package has a Commander-level default so --help documents it; only pass the
-      // value through as "already answered" when the user actually typed the flag, so the
-      // interactive wizard still gets a chance to ask (and offer a different default) otherwise.
+
+
+
       const basePackageWasExplicit = command.getOptionValueSource("basePackage") === "cli";
       await runNew({
         name: opts.name,
@@ -76,7 +73,6 @@ export function buildProgram(): Command {
         yes: opts.yes,
       });
     });
-
   program
     .command("add [moduleIds...]")
     .description("Apply one or more modules to a project.")
@@ -98,7 +94,6 @@ export function buildProgram(): Command {
         yes: opts.yes,
       });
     });
-
   program
     .command("list")
     .description("List available modules, services, or archetypes.")
@@ -108,7 +103,6 @@ export function buildProgram(): Command {
       else if (opts.what === "archetypes") listArchetypes();
       else listModules();
     });
-
   program
     .command("info")
     .description("Show what a module changes before applying it.")
@@ -116,7 +110,6 @@ export function buildProgram(): Command {
     .action(async (opts) => {
       await runInfo(opts.module);
     });
-
   program
     .command("status")
     .description("Show applied modules and whether newer versions exist.")
@@ -124,7 +117,6 @@ export function buildProgram(): Command {
     .action((opts) => {
       runStatus(opts.project);
     });
-
   program
     .command("upgrade")
     .description("Upgrade applied modules to the catalog's current versions.")
@@ -134,13 +126,11 @@ export function buildProgram(): Command {
     .action((opts) => {
       upgrade(opts.project, opts.module, opts.dryRun);
     });
-
   program
     .command("config")
     .description("Print the resolved jloom configuration.")
     .action(() => {
       runConfig();
     });
-
   return program;
 }

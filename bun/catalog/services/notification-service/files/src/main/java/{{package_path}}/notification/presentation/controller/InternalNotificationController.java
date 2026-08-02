@@ -1,5 +1,4 @@
 package {{package}}.notification.presentation.controller;
-
 import {{package}}.notification.application.service.NotificationService;
 import {{package}}.notification.domain.model.Notification;
 import {{package}}.notification.presentation.dto.NotificationRequest;
@@ -13,19 +12,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 @RestController
 @RequestMapping("/internal/notifications")
 class InternalNotificationController {
-
     private final NotificationService service;
     private final String serviceKey;
-
     InternalNotificationController(NotificationService service, @Value("${internal.service-key:}") String serviceKey) {
         this.service = service;
         this.serviceKey = serviceKey;
     }
-
     @PostMapping
     ResponseEntity<NotificationResponse> submit(
             @RequestHeader(value = "X-Internal-Service-Key", required = false) String providedKey,

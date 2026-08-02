@@ -1,24 +1,17 @@
 package {{package}}.file.application.service;
-
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Set;
-
 @Component
 public class MediaValidator {
-
     private static final int PEEK_SIZE = 16;
-
     private static final Set<String> ALLOWED = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif",
             "application/pdf", "video/mp4", "video/webm");
-
     public Set<String> allowedContentTypes() {
         return ALLOWED;
     }
-
     public String sniff(InputStream peekable) throws IOException {
         byte[] buf = new byte[PEEK_SIZE];
         int read = 0;
@@ -29,7 +22,6 @@ public class MediaValidator {
         }
         return matchSniffed(buf, read);
     }
-
     public String matchSniffed(byte[] buf, int read) {
         if (read >= 3 && (buf[0] & 0xFF) == 0xFF && (buf[1] & 0xFF) == 0xD8 && (buf[2] & 0xFF) == 0xFF) {
             return "image/jpeg";
