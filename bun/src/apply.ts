@@ -466,20 +466,27 @@ export interface AddOpts {
 }
 
 export async function runAdd(opts: AddOpts): Promise<void> {
+  const targetProject = path.resolve(opts.project);
   let ids = opts.moduleIds;
   if (ids.length === 0) {
-    const typed = await askNonBlankText(
-      undefined,
-      "modules",
-      "Which modules? (comma or space separated ids, see 'jloom list')",
-    );
-    ids = typed
-      .split(/[,\s]+/)
-      .map((s) => s.trim())
-      .filter((s) => s !== "");
+    if (!isInteractive()) {
+      throw new Error("Pass one or more module ids, e.g. 'jloom add postgres flyway' (no interactive terminal to prompt on).");
+    }
+    const applied = new Set(appliedIds(loadState(targetProject)));
+    const choices = [...catalog.modules.values()]
+      .filter((m) => !applied.has(m.id))
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((m) => ({
+        value: m.id,
+        label: m.id,
+        hint: m.provides !== undefined ? `provides=${m.provides}` : m.requires.length > 0 ? `requires=${m.requires.join(", ")}` : undefined,
+      }));
+    ids = await askMultiple("Which modules? (space to toggle, enter to confirm)", choices);
+    if (ids.length === 0) {
+      console.log(output.hint("No modules selected — nothing to do."));
+      return;
+    }
   }
-
-  const targetProject = path.resolve(opts.project);
   const showChrome = isInteractive() && !opts.dryRun && !opts.yes;
 
   if (showChrome) {
