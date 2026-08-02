@@ -1,8 +1,7 @@
 import path from "node:path";
+import { catalog, validate, type ModuleManifest } from "../catalog.ts";
 import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "../initializr.ts";
 import { applyOperations, compose, type ModuleSelection } from "../merge.ts";
-import { ModuleRegistry } from "../registry/moduleRegistry.ts";
-import type { ModuleManifest } from "../registry/types.ts";
 import { copy } from "../scaffold/fileTreeCopier.ts";
 import {
   appliedIds,
@@ -71,7 +70,6 @@ function deriveGroupId(basePackage: string): string {
 }
 
 function finish(
-  registry: ModuleRegistry,
   targetProject: string,
   state: ProjectState,
   moduleIds: string[],
@@ -96,7 +94,7 @@ function finish(
 
   let updated = seeded;
   for (const id of moduleIds) {
-    const manifest = registry.require(id);
+    const manifest = catalog.modules.get(id)!;
     updated = withApplied(updated, {
       id,
       version: manifest.version,
@@ -108,14 +106,7 @@ function finish(
   return { kind: "applied", output };
 }
 
-/** Mirrors ModuleApplier.apply(...). Note on dry-run: the Java version could still shell out
- * to a real `gradlew rewriteDryRun` when a wrapper existed on disk, but its own CLI callers
- * never actually displayed that diff text to the user (always a static "Dry run — ..."
- * message regardless) - so dropping OpenRewrite loses no user-visible behavior here. This
- * version still calls compose(...) during a dry run (cheap, in-memory) so a malformed merge
- * fragment is still caught early, but never touches disk when dryRun is true. */
 export async function apply(
-  registry: ModuleRegistry,
   targetProject: string,
   moduleIds: string[],
   overrides: Record<string, string>,
@@ -126,7 +117,7 @@ export async function apply(
 ): Promise<ApplyResult> {
   const state = loadState(targetProject);
 
-  const problems = registry.validate(appliedIds(state), moduleIds);
+  const problems = validate(catalog, appliedIds(state), moduleIds);
   if (problems.length > 0) {
     return { kind: "rejected", problems };
   }
@@ -138,7 +129,10 @@ export async function apply(
   const answersByModule = new Map<string, Record<string, string>>();
 
   for (const id of moduleIds) {
-    const manifest = registry.require(id);
+    const manifest = catalog.modules.get(id);
+    if (manifest === undefined) {
+      return { kind: "rejected", problems: [`Unknown module: ${id}`] };
+    }
     const answers = resolveDefaultsOnly(manifest, overrides);
     answersByModule.set(id, answers);
     if (manifest.mergeRecipes.length > 0) {
@@ -148,12 +142,9 @@ export async function apply(
 
   if (!dryRun) {
     for (const id of moduleIds) {
-      const manifest = registry.require(id);
+      const manifest = catalog.modules.get(id);
+      if (manifest === undefined) continue;
       if (manifest.scaffold) {
-        // "base" scaffolds via a real Spring Initializr call instead of jloom's own static
-        // file templates - see initializr.ts. Any remaining fileTemplates the module still
-        // declares (e.g. ArchitectureTest.java, which Initializr has no notion of) are still
-        // copied on top, same as before.
         if (manifest.id === "base") {
           const resolvedBasePackage = tokenState.basePackage ?? "com.example.app";
           const resolvedProjectName = tokenState.projectName ?? path.basename(targetProject);
@@ -183,7 +174,7 @@ export async function apply(
   if (selections.length > 0) {
     const operations = compose(selections);
     if (dryRun) {
-      return finish(registry, targetProject, state, moduleIds, answersByModule, dryRun, "Dry run — no changes written.", basePackage, projectName);
+      return finish(targetProject, state, moduleIds, answersByModule, dryRun, "Dry run — no changes written.", basePackage, projectName);
     }
     try {
       applyOperations(targetProject, operations);
@@ -195,7 +186,8 @@ export async function apply(
 
   if (!dryRun) {
     for (const id of moduleIds) {
-      const manifest = registry.require(id);
+      const manifest = catalog.modules.get(id);
+      if (manifest === undefined) continue;
       if (!manifest.scaffold && manifest.fileTemplates.length > 0) {
         const fileTokens = { ...projectTokens, ...answersByModule.get(id) };
         copy(manifest, targetProject, fileTokens);
@@ -203,5 +195,5 @@ export async function apply(
     }
   }
 
-  return finish(registry, targetProject, state, moduleIds, answersByModule, dryRun, recipeOutput, basePackage, projectName);
+  return finish(targetProject, state, moduleIds, answersByModule, dryRun, recipeOutput, basePackage, projectName);
 }

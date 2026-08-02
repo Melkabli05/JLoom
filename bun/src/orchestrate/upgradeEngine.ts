@@ -1,6 +1,5 @@
+import { catalog, findUpgradePath, type Upgrade } from "../catalog.ts";
 import { applyOperations, composeUpgrade, type UpgradeStep } from "../merge.ts";
-import { ModuleRegistry } from "../registry/moduleRegistry.ts";
-import type { Upgrade } from "../registry/types.ts";
 import { loadState, saveState, withApplied } from "../state/projectStateStore.ts";
 import type { AppliedModule } from "../state/projectStateStore.ts";
 
@@ -22,7 +21,6 @@ interface PlannedUpgrade {
  * answers (no fresh prompts/--set on upgrade) and never re-copies fileTemplates - only the
  * upgrade recipes' merge operations run. */
 export function upgrade(
-  registry: ModuleRegistry,
   targetProject: string,
   onlyModuleId: string | undefined,
   dryRun: boolean,
@@ -38,11 +36,11 @@ export function upgrade(
   const blocked: string[] = [];
 
   for (const applied of candidates) {
-    const current = registry.find(applied.id);
+    const current = catalog.modules.get(applied.id);
     if (current === undefined || current.version === applied.version) {
       continue;
     }
-    const path = registry.findUpgradePath(applied.id, applied.version);
+    const path = findUpgradePath(catalog, applied.id, applied.version);
     if (path.length === 0) {
       blocked.push(`${applied.id} is at ${applied.version}, catalog has ${current.version}, but no upgrade recipe bridges them`);
       continue;

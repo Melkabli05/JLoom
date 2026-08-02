@@ -1,10 +1,9 @@
 import path from "node:path";
 import * as output from "../output.ts";
 import { upgrade } from "../orchestrate/upgradeEngine.ts";
-import type { JloomContext } from "../context.ts";
 
-export function runUpgrade(ctx: JloomContext, project: string, moduleId: string | undefined, dryRun: boolean): void {
-  const result = upgrade(ctx.modules, path.resolve(project), moduleId, dryRun);
+export function runUpgrade(project: string, moduleId: string | undefined, dryRun: boolean): void {
+  const result = upgrade(path.resolve(project), moduleId, dryRun);
 
   switch (result.kind) {
     case "upToDate":

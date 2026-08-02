@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 import { createInterface } from "node:readline/promises";
-import { createContext } from "./context.ts";
 import { runAdd } from "./commands/add.ts";
 import { runConfig } from "./commands/config.ts";
 import { runInfo } from "./commands/info.ts";
@@ -77,15 +76,15 @@ function parseSetFlag(value: string, previous: Record<string, string>): Record<s
   return result;
 }
 
-// ===== dispatch table (replaces program.ts) =====
-async function dispatch(cmd: string | undefined, flags: Record<string, string>, positional: string[], ctx: ReturnType<typeof createContext>): Promise<void> {
+// ===== dispatch (replaces program.ts) =====
+async function dispatch(cmd: string | undefined, flags: Record<string, string>, positional: string[]): Promise<void> {
   switch (cmd) {
     case undefined:
     case "help":
       console.log(USAGE);
       return;
     case "new":
-      await runNew(ctx, io, {
+      await runNew(io, {
         name: flags.name,
         service: flags.service,
         basePackage: flags["base-package"] ?? "com.example.app",
@@ -98,7 +97,7 @@ async function dispatch(cmd: string | undefined, flags: Record<string, string>, 
       });
       return;
     case "add":
-      await runAdd(ctx, io, {
+      await runAdd(io, {
         project: flags.project ?? ".",
         moduleIds: positional,
         set: flags.set ? parseSetFlag(flags.set, {}) : {},
@@ -106,16 +105,16 @@ async function dispatch(cmd: string | undefined, flags: Record<string, string>, 
       });
       return;
     case "list":
-      runList(ctx, flags.what ?? "modules");
+      runList(flags.what ?? "modules");
       return;
     case "info":
-      await runInfo(ctx, io, flags.module);
+      await runInfo(io, flags.module);
       return;
     case "status":
-      runStatus(ctx, flags.project ?? ".");
+      runStatus(flags.project ?? ".");
       return;
     case "upgrade":
-      runUpgrade(ctx, flags.project ?? ".", flags.module, flags["dry-run"] === "true");
+      runUpgrade(flags.project ?? ".", flags.module, flags["dry-run"] === "true");
       return;
     case "config":
       runConfig();
@@ -127,16 +126,15 @@ async function dispatch(cmd: string | undefined, flags: Record<string, string>, 
   }
 }
 
-const ctx = createContext();
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const io = createReplIo(rl);
 
 try {
   if (process.argv.length <= 2) {
-    await runRepl(ctx, io);
+    await runRepl(io);
   } else {
     const { cmd, flags, positional } = parseArgs(process.argv);
-    await dispatch(cmd, flags, positional, ctx);
+    await dispatch(cmd, flags, positional);
   }
 } catch (err) {
   console.error(c("31", `✗ ${err instanceof Error ? err.message : String(err)}`));

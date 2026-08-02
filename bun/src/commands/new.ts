@@ -1,10 +1,10 @@
 import path from "node:path";
 import type { ReplIo } from "../lineSource.ts";
 import * as output from "../output.ts";
+import { catalog } from "../catalog.ts";
 import { apply } from "../orchestrate/moduleApplier.ts";
 import * as prompts from "../prompts.ts";
 import { isEmpty, requireEmpty } from "../util/projectPaths.ts";
-import type { JloomContext } from "../context.ts";
 
 const DEFAULT_PROJECT_NAME = "my-app";
 const DEFAULT_BASE_PACKAGE = "com.example.app";
@@ -26,7 +26,7 @@ function hasText(value: string | undefined): value is string {
   return value !== undefined && value.trim() !== "";
 }
 
-export async function runNew(ctx: JloomContext, io: ReplIo, options: NewOptions): Promise<void> {
+export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
   if (!options.quiet && !hasText(options.name) && prompts.isInteractive()) {
     console.log(
       `${output.hint("Let's set up your project — press Enter on any question to accept the default.")}\n`,
@@ -35,7 +35,7 @@ export async function runNew(ctx: JloomContext, io: ReplIo, options: NewOptions)
 
   const target = await resolveTarget(io, options.name);
 
-  const serviceChoices = new Map(ctx.services.all().map((s) => [`${s.id} — ${s.displayName}`, s.id]));
+  const serviceChoices = new Map([...catalog.services.values()].map((s) => [`${s.id} — ${s.displayName}`, s.id]));
   const serviceId = await prompts.chooseOptional(
     io,
     options.service,
@@ -48,11 +48,11 @@ export async function runNew(ctx: JloomContext, io: ReplIo, options: NewOptions)
   let moduleIds =
     serviceId === undefined
       ? await buildCapabilityWizard(io, options.database, options.capabilities, options.cacheProvider)
-      : ctx.services.require(serviceId).modules;
+      : catalog.services.get(serviceId)!.modules;
 
   let archetypeAnswers: Record<string, string> = {};
   if (options.archetype !== undefined) {
-    const manifest = ctx.archetypes.find(options.archetype);
+    const manifest = catalog.archetypes.get(options.archetype);
     if (manifest === undefined) {
       throw new Error(`No such archetype: ${options.archetype}`);
     }
@@ -78,7 +78,6 @@ export async function runNew(ctx: JloomContext, io: ReplIo, options: NewOptions)
   }
 
   const result = await apply(
-    ctx.modules,
     target,
     moduleIds,
     archetypeAnswers,

@@ -1,7 +1,13 @@
 import * as output from "./output.ts";
-import { buildProgram, execute } from "./program.ts";
 import type { ReplIo } from "./lineSource.ts";
-import type { JloomContext } from "./context.ts";
+import { catalog } from "./catalog.ts";
+import { runAdd } from "./commands/add.ts";
+import { runConfig } from "./commands/config.ts";
+import { runInfo } from "./commands/info.ts";
+import { runList } from "./commands/list.ts";
+import { runNew } from "./commands/new.ts";
+import { runStatus } from "./commands/status.ts";
+import { runUpgrade } from "./commands/upgrade.ts";
 
 interface MenuEntry {
   command: string;
@@ -57,10 +63,101 @@ function tokenize(trimmed: string): string[] {
   return tokens;
 }
 
-export async function runRepl(ctx: JloomContext, io: ReplIo): Promise<void> {
-  // Ctrl-C cancels the current line without exiting the REPL (matches the Java version's
-  // UserInterruptException -> continue handling). Without a listener, readline would just
-  // pause the input stream instead of cleanly returning to the next prompt.
+function parseFlags(tokens: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (let i = 0; i < tokens.length - 1; i++) {
+    if (tokens[i]!.startsWith("--")) {
+      const key = tokens[i]!.slice(2);
+      const next = tokens[i + 1];
+      if (next !== undefined && !next.startsWith("--")) {
+        result[key] = next;
+      }
+    }
+  }
+  return result;
+}
+
+async function dispatch(io: ReplIo, tokens: string[]): Promise<void> {
+  const cmd = tokens[0];
+  const allArgs = tokens.slice(1);
+  const flags = parseFlags([cmd ?? "", ...allArgs]);
+  const nonFlagArgs = allArgs.filter((t) => !t.startsWith("--"));
+
+  if (cmd === undefined || cmd === "help") {
+    console.log(jloomUsage());
+    return;
+  }
+
+  switch (cmd) {
+    case "new":
+      await runNew(io, {
+        name: flags.name,
+        service: flags.service,
+        basePackage: flags["base-package"] ?? "com.example.app",
+        archetype: flags.archetype,
+        database: flags.database,
+        capabilities: flags.capabilities,
+        cacheProvider: flags["cache-provider"],
+        dryRun: flags["dry-run"] === "true",
+        quiet: flags.quiet === "true",
+      });
+      return;
+    case "add":
+      await runAdd(io, {
+        project: flags.project ?? ".",
+        moduleIds: nonFlagArgs,
+        set: {},
+        dryRun: flags["dry-run"] === "true",
+      });
+      return;
+    case "list":
+      runList(flags.what ?? "modules");
+      return;
+    case "info":
+      await runInfo(io, flags.module);
+      return;
+    case "status":
+      runStatus(flags.project ?? ".");
+      return;
+    case "upgrade":
+      runUpgrade(flags.project ?? ".", flags.module, flags["dry-run"] === "true");
+      return;
+    case "config":
+      runConfig();
+      return;
+    default:
+      throw new Error(`unknown command: ${cmd ?? "(none)"}`);
+  }
+}
+
+// Reference catalog so any load-time error surfaces during REPL startup, not the first command.
+void catalog;
+
+function jloomUsage(): string {
+  return `jloom — generate and evolve production-ready backends.
+
+Usage:
+  jloom [command] [options]
+
+Commands:
+  new        Create a new project (interactive or via flags)
+  add        Add a module to an existing project
+  list       List available modules, services, or archetypes
+  info       Show what a module does before applying it
+  status     Show applied modules and any newer versions
+  upgrade    Pull newer versions of one or more modules
+  config     Print the resolved jloom configuration
+  help       Show this message
+
+Examples:
+  jloom new --name my-app --service user-service --base-package com.acme.demo
+  jloom add postgres flyway --project ./my-app
+  jloom list
+  jloom info --module postgres
+  jloom upgrade --dry-run`;
+}
+
+export async function runRepl(io: ReplIo): Promise<void> {
   io.rl.on("SIGINT", () => {
     io.rl.write("\n");
   });
@@ -88,15 +185,6 @@ export async function runRepl(ctx: JloomContext, io: ReplIo): Promise<void> {
       continue;
     }
 
-    const tokens = tokenize(trimmed);
-    if (tokens[0] === "help") {
-      // Route directly to outputHelp() (documented as non-exiting) rather than through full
-      // argument parsing, since Commander's built-in `help` subcommand is designed to end the
-      // program rather than return control to a REPL loop.
-      buildProgram(ctx, io).outputHelp();
-      continue;
-    }
-
-    await execute(buildProgram(ctx, io), tokens, "user");
+    await dispatch(io, tokenize(trimmed));
   }
 }

@@ -3,7 +3,6 @@ import type { ReplIo } from "../lineSource.ts";
 import * as output from "../output.ts";
 import * as prompts from "../prompts.ts";
 import { apply } from "../orchestrate/moduleApplier.ts";
-import type { JloomContext } from "../context.ts";
 
 async function resolveModuleIds(io: ReplIo, moduleIds: string[]): Promise<string[]> {
   if (moduleIds.length > 0) {
@@ -28,9 +27,9 @@ export interface AddOptions {
   dryRun: boolean;
 }
 
-export async function runAdd(ctx: JloomContext, io: ReplIo, options: AddOptions): Promise<void> {
+export async function runAdd(io: ReplIo, options: AddOptions): Promise<void> {
   const ids = await resolveModuleIds(io, options.moduleIds);
-  const result = await apply(ctx.modules, path.resolve(options.project), ids, options.set, options.dryRun, undefined, undefined);
+  const result = await apply(path.resolve(options.project), ids, options.set, options.dryRun, undefined, undefined);
 
   switch (result.kind) {
     case "applied":

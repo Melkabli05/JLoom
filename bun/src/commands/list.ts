@@ -1,6 +1,5 @@
 import * as output from "../output.ts";
-import type { JloomContext } from "../context.ts";
-import type { ModuleManifest, ServiceManifest, ArchetypeManifest } from "../registry/types.ts";
+import { catalog, type ModuleManifest, type ServiceManifest, type ArchetypeManifest } from "../catalog.ts";
 
 function javaList(items: string[]): string {
   return `[${items.join(", ")}]`;
@@ -31,38 +30,38 @@ function formatArchetypeLine(a: ArchetypeManifest, idWidth: number): string {
   return `  ${paddedId}  modules=${javaList(a.modules)}`;
 }
 
-export function listModules(ctx: JloomContext): void {
-  const sorted = [...ctx.modules.all()].sort((a, b) => a.id.localeCompare(b.id));
+export function listModules(): void {
+  const sorted = [...catalog.modules.values()].sort((a, b) => a.id.localeCompare(b.id));
   const idWidth = widthOf(sorted, (m) => m.id);
   const versionWidth = widthOf(sorted, (m) => m.version);
   const body = sorted.map((m) => formatModuleLine(m, idWidth, versionWidth)).join("\n");
   console.log(`${output.heading("Available modules:")}\n${body}`);
 }
 
-export function listServices(ctx: JloomContext): void {
-  const sorted = [...ctx.services.all()].sort((a, b) => a.id.localeCompare(b.id));
+export function listServices(): void {
+  const sorted = [...catalog.services.values()].sort((a, b) => a.id.localeCompare(b.id));
   const idWidth = widthOf(sorted, (s) => s.id);
   const nameWidth = widthOf(sorted, (s) => s.displayName);
   const body = sorted.map((s) => formatServiceLine(s, idWidth, nameWidth)).join("\n");
   console.log(`${output.heading("Available services:")}\n${body}`);
 }
 
-export function listArchetypes(ctx: JloomContext): void {
-  const sorted = [...ctx.archetypes.all()].sort((a, b) => a.id.localeCompare(b.id));
+export function listArchetypes(): void {
+  const sorted = [...catalog.archetypes.values()].sort((a, b) => a.id.localeCompare(b.id));
   const idWidth = widthOf(sorted, (a) => a.id);
   const body = sorted.map((a) => formatArchetypeLine(a, idWidth)).join("\n");
   console.log(`${output.heading("Available archetypes:")}\n${body}`);
 }
 
-export function runList(ctx: JloomContext, what: string): void {
+export function runList(what: string): void {
   switch (what.toLowerCase()) {
     case "archetypes":
-      listArchetypes(ctx);
+      listArchetypes();
       break;
     case "services":
-      listServices(ctx);
+      listServices();
       break;
     default:
-      listModules(ctx);
+      listModules();
   }
 }

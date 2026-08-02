@@ -1,11 +1,11 @@
 import * as output from "../output.ts";
 import * as prompts from "../prompts.ts";
 import type { ReplIo } from "../lineSource.ts";
-import type { JloomContext } from "../context.ts";
+import { catalog } from "../catalog.ts";
 
-export async function runInfo(ctx: JloomContext, io: ReplIo, moduleId: string | undefined): Promise<void> {
+export async function runInfo(io: ReplIo, moduleId: string | undefined): Promise<void> {
   const id = await prompts.requireNonBlankText(io, moduleId, "module", "Which module? (see 'jloom list' for ids)");
-  const mod = ctx.modules.find(id);
+  const mod = catalog.modules.get(id);
   if (mod === undefined) {
     throw new Error(`No such module: '${id}'. Run 'jloom list' to see available modules.`);
   }

@@ -1,8 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { readBytes, readText, resolvePath } from "../registry/catalogRoots.ts";
+import { readBytes, readText, resolvePath, type ModuleManifest } from "../catalog.ts";
 import { substitute } from "../merge.ts";
-import type { ModuleManifest } from "../registry/types.ts";
 
 function isBinary(relativePath: string): boolean {
   return relativePath.endsWith(".jar") || relativePath.endsWith(".png") || relativePath.endsWith(".ico");

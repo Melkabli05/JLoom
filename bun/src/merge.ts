@@ -2,8 +2,7 @@ import yaml from "js-yaml";
 import { existsSync, globSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { readText } from "./registry/catalogRoots.ts";
-import type { ModuleManifest } from "./registry/types.ts";
+import { readText, type ModuleManifest } from "./catalog.ts";
 
 // ===== Operations (the entire "what we do to files" surface) =====
 
