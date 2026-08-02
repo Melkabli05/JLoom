@@ -4,7 +4,7 @@ import type { ReplIo } from "./lineSource.ts";
 import { catalog, validate, findUpgradePath, readBytes, readText, resolvePath, type ModuleManifest, type Upgrade } from "./catalog.ts";
 import { generateSpringBootProject, initializrDependenciesFor, type FetchLike } from "./initializr.ts";
 import { applyOperations, compose, composeUpgrade, substitute, type ModuleSelection, type UpgradeStep } from "./merge.ts";
-import { askChoice, askMultiple, askNonBlankText, askOptional, askText, isInteractive, output } from "./wizard.ts";
+import { askChoice, askConfirm, askMultiple, askNonBlankText, askOptional, askText, isInteractive, output, sectionHeader } from "./wizard.ts";
 import {
   appliedIds,
   loadState,
@@ -455,6 +455,7 @@ export interface AddOpts {
   moduleIds: string[];
   set: Record<string, string>;
   dryRun: boolean;
+  yes?: boolean;
 }
 
 export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
@@ -472,8 +473,26 @@ export async function runAdd(io: ReplIo, opts: AddOpts): Promise<void> {
       .filter((s) => s !== "");
   }
 
+  const targetProject = path.resolve(opts.project);
+
+  if (isInteractive() && !opts.dryRun && !opts.yes) {
+    console.log(
+      [
+        "",
+        output.question("Summary:"),
+        `  Project: ${output.accent(targetProject)}`,
+        `  Adding:  ${output.accent(ids.join(", "))}`,
+        "",
+      ].join("\n"),
+    );
+    if (!(await askConfirm(io, "Proceed?", true))) {
+      console.log(output.hint("Aborted — no changes were made."));
+      return;
+    }
+  }
+
   const result = await apply({
-    targetProject: path.resolve(opts.project),
+    targetProject,
     moduleIds: ids,
     overrides: opts.set,
     dryRun: opts.dryRun,
@@ -514,17 +533,24 @@ export const CAPABILITY_IDS = [
 export interface NewOptions {
   name?: string;
   service?: string;
-  basePackage: string;
+  basePackage?: string;
   archetype?: string;
   database?: (typeof DATABASE_IDS)[number];
   capabilities?: (typeof CAPABILITY_IDS)[number][];
   cacheProvider?: (typeof CACHE_PROVIDER_IDS)[number];
   dryRun: boolean;
   quiet: boolean;
+  yes?: boolean;
 }
 
 function hasText(value: string | undefined): value is string {
   return value !== undefined && value.trim() !== "";
+}
+
+function validateBasePackage(value: string): string | undefined {
+  return BASE_PACKAGE_PATTERN.test(value)
+    ? undefined
+    : `must be a valid dotted Java package name, e.g. com.acme.myapp (got '${value}')`;
 }
 
 export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
@@ -532,8 +558,10 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     console.log(`${output.hint("Let's set up your project — press Enter on any question to accept the default.")}\n`);
   }
 
+  if (!hasText(options.name) && isInteractive()) sectionHeader("Project");
   const target = await resolveTarget(io, options.name);
 
+  if (!hasText(options.service) && isInteractive()) sectionHeader("Type");
   const serviceChoices = new Map([...catalog.services.values()].map((s) => [`${s.id} — ${s.displayName}`, s.id]));
   const serviceId = await askOptional(
     io,
@@ -556,15 +584,35 @@ export async function runNew(io: ReplIo, options: NewOptions): Promise<void> {
     archetypeAnswers = manifest.answers;
   }
 
+  if (!hasText(options.basePackage) && isInteractive()) sectionHeader("Package");
+  // Only prompt interactively when the flag was actually omitted (isInteractive() branch below);
+  // non-interactive runs keep silently defaulting to DEFAULT_BASE_PACKAGE exactly as before.
+  const basePackageInput = isInteractive() ? options.basePackage : (options.basePackage ?? DEFAULT_BASE_PACKAGE);
   const resolvedBasePackage = await askText(
     io,
-    options.basePackage,
+    basePackageInput,
     "base-package",
     "Base package",
     DEFAULT_BASE_PACKAGE,
+    validateBasePackage,
   );
-  if (!BASE_PACKAGE_PATTERN.test(resolvedBasePackage)) {
-    throw new Error(`--base-package must be a valid dotted Java package name, e.g. com.acme.myapp (got '${resolvedBasePackage}')`);
+
+  if (isInteractive() && !options.quiet && !options.dryRun && !options.yes) {
+    console.log(
+      [
+        "",
+        output.question("Summary:"),
+        `  Project:      ${output.accent(path.basename(target))}`,
+        `  Location:     ${output.accent(target)}`,
+        `  Base package: ${output.accent(resolvedBasePackage)}`,
+        `  Modules:      ${output.accent(moduleIds.join(", "))}`,
+        "",
+      ].join("\n"),
+    );
+    if (!(await askConfirm(io, "Proceed?", true))) {
+      console.log(output.hint("Aborted — no changes were made."));
+      return;
+    }
   }
 
   if (!options.quiet) {
@@ -681,6 +729,7 @@ const CAPABILITY_TO_MODULE = (capability: string, databaseModule: string | undef
 async function resolveDatabase(io: ReplIo, database: string | undefined): Promise<string | undefined> {
   if (database === "none") return undefined;
   if (database !== undefined) return database;
+  if (isInteractive()) sectionHeader("Database");
   const choices = new Map([
     ["PostgreSQL", "postgres"],
     ["MySQL", "mysql"],
@@ -696,6 +745,7 @@ async function resolveCapabilityIds(
   databaseModule: string | undefined,
 ): Promise<string[]> {
   if (capabilities !== undefined) return capabilities;
+  if (isInteractive()) sectionHeader("Capabilities");
   const choices = new Map<string, string>();
   choices.set("Validation", "validation");
   if (databaseModule !== undefined) choices.set("Database migrations", "migrations");

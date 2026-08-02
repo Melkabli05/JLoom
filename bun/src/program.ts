@@ -58,17 +58,23 @@ export function buildProgram(io: ReplIo): Command {
     .addOption(new Option("--cache-provider <provider>", "Only relevant if 'caching' is in --capabilities.").choices(CACHE_PROVIDER_IDS))
     .option("--dry-run", "Preview without writing.", false)
     .option("-q, --quiet", "Suppress non-essential output.", false)
-    .action(async (opts) => {
+    .option("-y, --yes", "Skip the final confirmation prompt.", false)
+    .action(async (opts, command) => {
+      // --base-package has a Commander-level default so --help documents it; only pass the
+      // value through as "already answered" when the user actually typed the flag, so the
+      // interactive wizard still gets a chance to ask (and offer a different default) otherwise.
+      const basePackageWasExplicit = command.getOptionValueSource("basePackage") === "cli";
       await runNew(io, {
         name: opts.name,
         service: opts.service,
-        basePackage: opts.basePackage,
+        basePackage: basePackageWasExplicit ? opts.basePackage : undefined,
         archetype: opts.archetype,
         database: opts.database,
         capabilities: opts.capabilities,
         cacheProvider: opts.cacheProvider,
         dryRun: opts.dryRun,
         quiet: opts.quiet,
+        yes: opts.yes,
       });
     });
 
@@ -83,12 +89,14 @@ export function buildProgram(io: ReplIo): Command {
       {},
     )
     .option("--dry-run", "Preview without writing.", false)
+    .option("-y, --yes", "Skip the final confirmation prompt.", false)
     .action(async (moduleIds: string[], opts) => {
       await runAdd(io, {
         project: opts.project,
         moduleIds,
         set: opts.set,
         dryRun: opts.dryRun,
+        yes: opts.yes,
       });
     });
 

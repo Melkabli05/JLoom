@@ -30,14 +30,27 @@ export async function askText(
   promptLabel: string,
   prompt: string,
   defaultValue: string,
+  validate?: (value: string) => string | undefined,
 ): Promise<string> {
-  if (hasText(provided)) return provided;
+  if (hasText(provided)) {
+    const error = validate?.(provided);
+    if (error !== undefined) throw new Error(`--${promptLabel}: ${error}`);
+    return provided;
+  }
   if (!isInteractive()) {
     throw new Error(`--${promptLabel} is required (no interactive terminal to prompt on)`);
   }
   console.log(question(prompt));
-  const line = (await readLine(io, `${promptLabel} ${hint(`[${defaultValue}]`)}: `)) ?? "";
-  return line.trim() === "" ? defaultValue : line.trim();
+  while (true) {
+    const line = (await readLine(io, `${promptLabel} ${hint(`[${defaultValue}]`)}: `)) ?? "";
+    const value = line.trim() === "" ? defaultValue : line.trim();
+    const error = validate?.(value);
+    if (error !== undefined) {
+      console.log(`  ${err(error)}`);
+      continue;
+    }
+    return value;
+  }
 }
 
 export async function askNonBlankText(
@@ -130,4 +143,16 @@ export async function askMultiple(
     }
   }
   return labels.filter((_, i) => selected[i]).map((label) => choices.get(label)!);
+}
+
+export async function askConfirm(io: ReplIo, message: string, defaultYes = true): Promise<boolean> {
+  if (!isInteractive()) return defaultYes;
+  const suffix = defaultYes ? "Y/n" : "y/N";
+  const line = ((await readLine(io, `${message} [${suffix}]: `)) ?? "").trim().toLowerCase();
+  if (line === "") return defaultYes;
+  return line === "y" || line === "yes";
+}
+
+export function sectionHeader(title: string): void {
+  console.log(`\n${accent(`— ${title} —`)}`);
 }
