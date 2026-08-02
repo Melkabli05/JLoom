@@ -1,0 +1,17 @@
+# auditing — @EnableJpaAuditing + a reusable AuditableEntity base class (createdDate/
+# lastModifiedDate via @CreatedDate/@LastModifiedDate). No new dependency: @EnableJpaAuditing
+# lives in spring-data-jpa, already present via whichever database module (postgres/mysql/
+# mariadb/h2) provides capability:relational-db. Entity-level @CreatedBy/@LastModifiedBy would
+# need an AuditorAware<T> bean tied to a real principal type, which doesn't exist generically —
+# left for the security/business module that has one.
+id: auditing
+version: 1.0.0
+requires: [capability:relational-db]
+conflicts: []
+provides: capability:auditing
+prompts: []
+mergeRecipes: []
+fileTemplates:
+  - src/main/java/{{package_path}}/config/AuditingConfig.java
+  - src/main/java/{{package_path}}/domain/AuditableEntity.java
+upgrades: []

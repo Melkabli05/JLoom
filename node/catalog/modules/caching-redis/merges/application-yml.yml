@@ -1,0 +1,11 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring
+    yaml: |
+      data:
+        redis:
+          host: localhost
+          port: 6379
+      cache:
+        redis:
+          time-to-live: 10m
+    filePattern: "**/application.yml"

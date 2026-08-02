@@ -1,0 +1,7 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring
+    yaml: |
+      cache:
+        caffeine:
+          spec: "maximumSize=500,expireAfterWrite=600s"
+    filePattern: "**/application.yml"

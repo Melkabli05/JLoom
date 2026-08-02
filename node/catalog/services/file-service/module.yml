@@ -1,0 +1,51 @@
+id: file-service
+version: 0.1.0
+requires: [base, capability:http-api, capability:relational-db, capability:validation, capability:auth, capability:async, capability:scheduling]
+conflicts: []
+prompts:
+  - key: internal_service_key
+    type: secret
+    default: change-me-internal-service-key-dev-only
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/file/domain/model/MediaAsset.java
+  - src/main/java/{{package_path}}/file/domain/model/MediaAssetStatus.java
+  - src/main/java/{{package_path}}/file/domain/model/MediaVisibility.java
+  - src/main/java/{{package_path}}/file/domain/model/MediaPurpose.java
+  - src/main/java/{{package_path}}/file/infrastructure/persistence/MediaAssetRepository.java
+  - src/main/java/{{package_path}}/file/infrastructure/configuration/MediaConfig.java
+  - src/main/java/{{package_path}}/file/infrastructure/configuration/MediaStorageProperties.java
+  - src/main/java/{{package_path}}/file/infrastructure/configuration/MediaProperties.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/MediaStorage.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/MediaObject.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/MediaNotFoundException.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/MediaStorageException.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/LocalFilesystemStorage.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/MinioStorage.java
+  - src/main/java/{{package_path}}/file/infrastructure/storage/MediaKeyFactory.java
+  - src/main/java/{{package_path}}/file/application/service/MediaService.java
+  - src/main/java/{{package_path}}/file/application/service/MediaServiceImpl.java
+  - src/main/java/{{package_path}}/file/application/service/MediaValidator.java
+  - src/main/java/{{package_path}}/file/application/exception/PayloadTooLargeException.java
+  - src/main/java/{{package_path}}/file/application/exception/UnsupportedMediaTypeException.java
+  - src/main/java/{{package_path}}/file/application/exception/PresignUnsupportedException.java
+  - src/main/java/{{package_path}}/file/application/service/ThumbnailGenerator.java
+  - src/main/java/{{package_path}}/file/application/service/MediaCleanupTask.java
+  - src/main/java/{{package_path}}/file/presentation/dto/MediaUploadResponse.java
+  - src/main/java/{{package_path}}/file/presentation/dto/MediaView.java
+  - src/main/java/{{package_path}}/file/presentation/dto/PresignedUploadResponse.java
+  - src/main/java/{{package_path}}/file/presentation/mapper/MediaMapper.java
+  - src/main/java/{{package_path}}/file/presentation/support/MediaStreaming.java
+  - src/main/java/{{package_path}}/file/presentation/controller/MediaController.java
+  - src/main/java/{{package_path}}/file/presentation/controller/InternalMediaController.java
+  - src/main/resources/db/migration/V2__create_media_assets.sql
+  - src/test/java/{{package_path}}/file/FileLayeringTest.java
+  - src/test/java/{{package_path}}/file/application/service/MediaServiceTest.java
+  - src/test/java/{{package_path}}/file/application/service/MediaValidatorTest.java
+  - src/test/java/{{package_path}}/file/application/service/ThumbnailGeneratorTest.java
+  - src/test/java/{{package_path}}/file/application/service/MediaCleanupTaskTest.java
+  - src/test/java/{{package_path}}/file/infrastructure/storage/LocalFilesystemStorageTest.java
+  - src/test/java/{{package_path}}/file/presentation/controller/MediaControllerTest.java
+  - src/test/java/{{package_path}}/file/presentation/controller/InternalMediaControllerTest.java

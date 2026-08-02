@@ -1,0 +1,14 @@
+# caching-redis — Spring's cache abstraction backed by Redis. Sibling of caching-caffeine: same
+# capability, same CacheConfig shape, only the provider and its config differ.
+id: caching-redis
+version: 1.0.0
+requires: []
+conflicts: [caching-caffeine]
+provides: capability:caching
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/config/CacheConfig.java
+upgrades: []

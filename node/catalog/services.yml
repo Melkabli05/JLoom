@@ -1,0 +1,48 @@
+services:
+  - id: notification-service
+    displayName: Notification Service
+    description: >
+      Email notification delivery service (spring-boot-starter-mail), backed by real Spring
+      Data JPA persistence, layered package structure (presentation/application/domain/infrastructure).
+      Async delivery with bounded retry for transient SMTP failures. Available for Spring Boot
+      and Micronaut.
+    framework: [spring-boot, micronaut]
+    modules:
+      spring-boot: [base, postgres, flyway, jwt-auth, validation, async, scheduling, otel-tracing, problem-details, notification-service]
+      micronaut:   [base-micronaut, notification-micronaut]
+  - id: user-service
+    displayName: User Service
+    description: >
+      CRUD user management with password hashing, backed by real Spring Data JPA persistence
+      and a layered package structure. Email verification and rate-limited login are future
+      additions. Available for Spring Boot and Micronaut.
+    framework: [spring-boot, micronaut]
+    modules:
+      spring-boot: [base, postgres, flyway, jwt-auth, validation, otel-tracing, problem-details, user-service]
+      micronaut:   [base-micronaut, user-micronaut]
+  - id: identity-service
+    displayName: Identity Service
+    description: >
+      JWT issuer with JWKS endpoint. Ships POST /tokens, GET /.well-known/jwks.json (empty for
+      HS256), and GET /me as a protected sample. Genuinely stateless (no database — nothing in
+      this service persists anything), so it doesn't carry a database module. Spring Boot only
+      for now.
+    framework: [spring-boot]
+    modules: [base, otel-tracing, problem-details, identity-service]
+  - id: micronaut-skeleton
+    displayName: Micronaut Skeleton (v0.1 placeholder)
+    description: >
+      Bare Micronaut 4 application skeleton. Per-service Micronaut variants land as their
+      Spring Boot siblings do — currently notification-service + user-service.
+    framework: [micronaut]
+    modules: [base-micronaut]
+  - id: file-service
+    displayName: File / Media Service
+    description: >
+      Object storage service with pluggable backends (local filesystem for dev, S3-compatible
+      for prod — works against AWS S3, MinIO, Garage, Cloudflare R2, Backblaze B2), pre-signed
+      URL upload for browsers, server-side streaming upload for service-to-service ingestion,
+      magic-byte content-type sniffing, async thumbnail generation, JWT-protected user
+      downloads with HTTP range support, and a scheduled cleanup of expired assets.
+    framework: [spring-boot]
+    modules: [base, postgres, flyway, jwt-auth, validation, async, scheduling, otel-tracing, problem-details, file-service]

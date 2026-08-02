@@ -1,0 +1,51 @@
+id: notification-service
+version: 3.6.0
+requires: [base, capability:http-api, capability:relational-db, capability:validation, capability:auth, capability:async, capability:scheduling]
+conflicts: []
+prompts:
+  - key: internal_service_key
+    type: secret
+    default: change-me-internal-service-key-dev-only
+  - key: mail_host
+    type: string
+    default: localhost
+  - key: mail_port
+    type: string
+    default: "1025"
+  - key: mail_username
+    type: string
+    default: ""
+  - key: mail_password
+    type: secret
+    default: ""
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/notification/domain/model/Notification.java
+  - src/main/java/{{package_path}}/notification/domain/model/NotificationChannel.java
+  - src/main/java/{{package_path}}/notification/domain/model/NotificationStatus.java
+  - src/main/java/{{package_path}}/notification/domain/model/FailureReason.java
+  - src/main/java/{{package_path}}/notification/infrastructure/persistence/NotificationRepository.java
+  - src/main/java/{{package_path}}/notification/infrastructure/configuration/NotificationConfig.java
+  - src/main/java/{{package_path}}/notification/infrastructure/configuration/NotificationRecoveryProperties.java
+  - src/main/java/{{package_path}}/notification/application/service/NotificationService.java
+  - src/main/java/{{package_path}}/notification/application/service/NotificationServiceImpl.java
+  - src/main/java/{{package_path}}/notification/application/service/NotificationSender.java
+  - src/main/java/{{package_path}}/notification/application/service/EmailNotificationSender.java
+  - src/main/java/{{package_path}}/notification/application/service/PendingNotificationRecoveryTask.java
+  - src/main/java/{{package_path}}/notification/presentation/mapper/NotificationMapper.java
+  - src/main/java/{{package_path}}/notification/presentation/dto/NotificationRequest.java
+  - src/main/java/{{package_path}}/notification/presentation/dto/NotificationResponse.java
+  - src/main/java/{{package_path}}/notification/presentation/dto/NotificationView.java
+  - src/main/java/{{package_path}}/notification/presentation/dto/NotificationDetailView.java
+  - src/main/java/{{package_path}}/notification/presentation/controller/NotificationController.java
+  - src/main/java/{{package_path}}/notification/presentation/controller/InternalNotificationController.java
+  - src/main/resources/db/migration/V2__create_notifications_table.sql
+  - src/main/resources/db/migration/V3__add_notifications_created_at_index.sql
+  - src/test/java/{{package_path}}/notification/application/service/NotificationServiceTest.java
+  - src/test/java/{{package_path}}/notification/application/service/EmailNotificationSenderTest.java
+  - src/test/java/{{package_path}}/notification/application/service/PendingNotificationRecoveryTaskTest.java
+  - src/test/java/{{package_path}}/notification/presentation/controller/NotificationControllerTest.java
+  - src/test/java/{{package_path}}/notification/presentation/controller/InternalNotificationControllerTest.java
+  - src/test/java/{{package_path}}/notification/NotificationLayeringTest.java

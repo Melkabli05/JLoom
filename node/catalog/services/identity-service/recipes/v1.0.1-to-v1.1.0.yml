@@ -1,0 +1,27 @@
+# identity-service 1.0.1 -> 1.1.0: IdentityConfig now reads the HMAC secret from `jwt.secret`
+# (the same key jwt-auth's JwtDecoder validates against) instead of a `JWT_SECRET` env var, so a
+# token issued here actually verifies wherever jwt-auth is also present — previously the two used
+# unrelated secrets and no token from either side could ever validate against the other. Also
+# backfills `internal.service-key`, `user-service.base-url` (blank by default, preserving today's
+# placeholder /tokens behavior unless explicitly configured), and this module's own
+# `jwt.public-paths.identity-service` entry (POST /tokens must stay reachable without a token
+# already — you can't require a JWT to go get a JWT). Not attempting to backport
+# IdentityController's/JwtIssuer's Java changes — this generator never patches a project's
+# already-generated (and possibly hand-edited) Java files via upgrade recipes.
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      secret: "change-me-in-production-this-is-a-dev-only-default-32-chars-min"
+      public-paths:
+        identity-service: "POST:/tokens"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.internal
+    yaml: |
+      service-key: "change-me-internal-service-key-dev-only"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.user-service
+    yaml: |
+      base-url: ""
+    filePattern: "**/application.yml"

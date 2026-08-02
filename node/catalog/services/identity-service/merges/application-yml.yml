@@ -1,0 +1,19 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      issuer: "{{jwt_issuer}}"
+      token-ttl-seconds: 3600
+      secret: "{{jwt_secret}}"
+      public-paths:
+        identity-service: "POST:/tokens"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.internal
+    yaml: |
+      service-key: "{{internal_service_key}}"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.user-service
+    yaml: |
+      base-url: "{{user_service_base_url}}"
+    filePattern: "**/application.yml"

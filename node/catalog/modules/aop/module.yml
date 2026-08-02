@@ -1,0 +1,18 @@
+# aop — Spring AOP via spring-boot-starter-aspectj (renamed from spring-boot-starter-aop in
+# Spring Boot 4.0 — verified against the actual published Maven Central metadata, since
+# spring-boot-starter-aop's last release is only a 4.0.0 milestone), plus one real cross-cutting
+# aspect: method-level
+# execution timing for every @Service bean. This is deliberately the one AOP use case that's
+# useful in literally any application regardless of domain (perf visibility), rather than an
+# invented example with nothing to attach to.
+id: aop
+version: 1.0.0
+requires: []
+conflicts: []
+provides: capability:aop
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/config/MethodTimingAspect.java
+upgrades: []

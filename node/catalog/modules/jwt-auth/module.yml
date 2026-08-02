@@ -1,0 +1,21 @@
+# jwt-auth — adds Spring Security + OAuth2 Resource Server dependencies, `jwt.*` configuration,
+# and a working SecurityConfig: a genuine stateless JWT bearer-token resource server (JwtDecoder
+# validates against `jwt.secret`, a JwtAuthenticationConverter maps a `roles` claim to granted
+# authorities, method security is enabled for @PreAuthorize elsewhere). File templates and merge
+# recipes both apply within the same module batch, before any Gradle/OpenRewrite step runs — see
+# ModuleApplier — so there's no chicken-and-egg with the new dependencies this module also adds.
+id: jwt-auth
+version: 2.0.0
+requires: []
+conflicts: []
+provides: capability:auth
+prompts:
+  - key: jwt_secret
+    type: secret
+    default: change-me-in-production-this-is-a-dev-only-default-32-chars-min
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/security/SecurityConfig.java
+  - src/main/java/{{package_path}}/security/SecurityExceptionHandler.java

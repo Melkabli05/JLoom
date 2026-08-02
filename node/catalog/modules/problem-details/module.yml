@@ -1,0 +1,17 @@
+# problem-details — adds a global exception handler using Spring's built-in ProblemDetail
+# (Spring Framework 6+ / Boot 3+, already on the classpath via spring-boot-starter-webmvc).
+# Deliberately depends on nothing beyond spring-web/slf4j (both always present) so it stays
+# usable by every service regardless of persistence/security modules — e.g. it must never take a
+# hard dependency on org.springframework.dao.* (spring-tx), which identity-service's classpath
+# does not carry.
+#
+# Has no mergeRecipes: applying it via `add` (not `new`) exercises the file-only-module path,
+# which relies on ProjectState.basePackage to substitute {{package_path}} correctly.
+id: problem-details
+version: 1.1.0
+requires: []
+conflicts: []
+prompts: []
+mergeRecipes: []
+fileTemplates:
+  - src/main/java/{{package_path}}/web/GlobalExceptionHandler.java

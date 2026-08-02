@@ -1,0 +1,19 @@
+# caching-caffeine — Spring's cache abstraction backed by Caffeine (in-process, no external
+# service to run). Sibling of caching-redis: same capability, same CacheConfig shape, only the
+# provider and its config differ.
+#
+# @EnableCaching deliberately lives on its own CacheConfig class, not on Application.java — the
+# official Spring Boot caching docs warn against annotating the main class, since that makes
+# caching a mandatory feature even when running a test suite that never touches it.
+id: caching-caffeine
+version: 1.0.0
+requires: []
+conflicts: [caching-redis]
+provides: capability:caching
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates:
+  - src/main/java/{{package_path}}/config/CacheConfig.java
+upgrades: []

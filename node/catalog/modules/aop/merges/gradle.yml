@@ -1,0 +1,4 @@
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-aspectj
+    configuration: implementation

@@ -1,0 +1,19 @@
+# testcontainers — adds Testcontainers JUnit Jupiter + a Postgres container for integration tests.
+# Postgres-flavored specifically (like the `flyway` module) — pick a mysql/mariadb-specific
+# module instead if you added one of those databases; artifact names verified against the actual
+# testcontainers-bom 2.0.5 POM (the one Spring Boot 4.1's own BOM imports), which uses a
+# `testcontainers-<module>` naming scheme, not the older bare `postgresql`/`junit-jupiter` names.
+#
+# Deps are testImplementation only, so there's no compile-time chicken-and-egg (test code is
+# compiled in a separate task from main code, and Testcontainers is only resolved at test time).
+# Sample Testcontainers-based tests are left to the user — `jloom add testcontainers` lands the
+# dependencies and a working container fixture can be @Autowired or @Container-managed from there.
+id: testcontainers
+version: 1.0.0
+requires: [capability:relational-db]
+conflicts: []
+provides: capability:integration-testing
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+fileTemplates: []

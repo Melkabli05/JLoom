@@ -1,0 +1,17 @@
+# otel-tracing — adds OpenTelemetry distributed tracing via Micrometer Tracing, plus the
+# Spring Boot Actuator endpoints that expose `/actuator/metrics`, `/actuator/health`, etc.
+#
+# Same pattern as jwt-auth: deps + yml only, no Java template, because OpenRewrite's rewriteRun
+# depends on compileJava succeeding (chicken-and-egg when the new deps haven't landed yet).
+# Once the module is applied, the Spring Boot Actuator auto-configuration exposes the standard
+# endpoints; tracing will be on for any HTTP request thanks to the bridge.
+id: otel-tracing
+version: 1.0.0
+requires: []
+conflicts: []
+provides: capability:tracing
+prompts: []
+mergeRecipes:
+  - merges/gradle.yml
+  - merges/application-yml.yml
+fileTemplates: []

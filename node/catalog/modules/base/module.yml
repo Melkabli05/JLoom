@@ -1,0 +1,23 @@
+# base — the minimal Spring Boot 4 / Java 25 project skeleton.
+# Special-cased by NewCommand: it's the one module applied via plain file copy rather than
+# OpenRewrite, because until it exists there's no ./gradlew for OpenRewrite to run through.
+id: base
+version: 1.0.0
+requires: []
+conflicts: []
+prompts: []
+provides: capability:http-api
+mergeRecipes: []
+scaffold: true
+fileTemplates:
+  - settings.gradle.kts
+  - build.gradle.kts
+  - gradlew
+  - gradlew.bat
+  - gradle/wrapper/gradle-wrapper.properties
+  - gradle/wrapper/gradle-wrapper.jar
+  - src/main/java/{{package_path}}/Application.java
+  - src/main/resources/application.yml
+  - src/test/java/{{package_path}}/ArchitectureTest.java
+  - .gitignore
+  - README.md

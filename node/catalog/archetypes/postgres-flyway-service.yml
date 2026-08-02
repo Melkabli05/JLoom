@@ -1,0 +1,7 @@
+# `postgres` provides capability:relational-db; `flyway` requires it. Order matters here —
+# ModuleRegistry.validate() rejects this list if flyway is listed before postgres.
+modules:
+  - postgres
+  - flyway
+answers:
+  postgres.db_name: app

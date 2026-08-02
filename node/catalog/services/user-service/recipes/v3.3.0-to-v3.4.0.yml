@@ -1,0 +1,5 @@
+- org.openrewrite.text.CreateTextFile:
+    relativeFileName: src/main/resources/db/migration/V4__add_user_enabled.sql
+    fileContents: |
+      alter table users add column enabled boolean not null default true;
+    overwriteExisting: false

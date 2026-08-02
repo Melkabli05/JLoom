@@ -1,0 +1,5 @@
+archetypes:
+  - postgres-service
+  - postgres-flyway-service
+  - notification-stack
+  - identity-with-user

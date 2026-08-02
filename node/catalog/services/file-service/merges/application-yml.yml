@@ -1,0 +1,48 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.jpa
+    yaml: |
+      hibernate:
+        ddl-auto: validate
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.servlet.multipart
+    yaml: |
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 110MB
+      file-size-threshold: 1MB
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      public-paths:
+        file-service: "POST:/internal/media/uploads,POST:/internal/media/presign,GET:/internal/media/*"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.internal
+    yaml: |
+      service-key: "{{internal_service_key}}"
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
+    key: $.media
+    yaml: |
+      storage:
+        type: local
+        local:
+          base-dir: ${MEDIA_STORAGE_DIR:/tmp/jloom-media}
+        minio:
+          endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+          access-key: ${MINIO_ACCESS_KEY:minioadmin}
+          secret-key: ${MINIO_SECRET_KEY:minioadmin}
+          region: ${MINIO_REGION:us-east-1}
+          bucket: ${MINIO_BUCKET:media}
+          presign-ttl: PT15M
+        max-file-size: 100MB
+      thumbnails:
+        sizes: 64x64,256x256
+        jpeg-quality: 85
+      cleanup:
+        interval: PT15M
+        batch-size: 200
+      admin-authority: ROLE_ADMIN
+    filePattern: "**/application.yml"

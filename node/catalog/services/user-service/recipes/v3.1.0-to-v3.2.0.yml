@@ -1,0 +1,19 @@
+- org.openrewrite.text.CreateTextFile:
+    relativeFileName: src/main/resources/db/migration/V2__create_users_table.sql
+    fileContents: |
+      create table users (
+          id                 uuid primary key,
+          email              varchar(255) not null,
+          password_hash      varchar(255) not null,
+          created_at         timestamptz not null,
+          email_verified_at  timestamptz,
+          constraint uq_users_email unique (email),
+          constraint chk_users_email_lowercase check (email = lower(email))
+      );
+    overwriteExisting: false
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.jpa
+    yaml: |
+      hibernate:
+        ddl-auto: validate
+    filePattern: "**/application.yml"

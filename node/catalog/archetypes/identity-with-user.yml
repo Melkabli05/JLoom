@@ -1,0 +1,19 @@
+# identity-with-user — typical two-service starter: identity-service as the JWT issuer +
+# user-service as the consumer, wired together for real. identity-service's POST /tokens calls
+# user-service's internal credential-verification endpoint (see IdentityController) and issues a
+# JWT whose subject is the actual user id; jwt-auth (added here so user-service's
+# capability:auth requirement is actually satisfied — this archetype previously omitted it and
+# could never successfully generate) validates that token against the same shared `jwt.secret`
+# identity-service signs with.
+modules:
+  - postgres
+  - flyway
+  - jwt-auth
+  - validation
+  - otel-tracing
+  - problem-details
+  - identity-service
+  - user-service
+answers:
+  postgres.db_name: app
+  identity-service.user_service_base_url: "http://localhost:${server.port}"
