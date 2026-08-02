@@ -11,7 +11,16 @@ export type FetchLike = (url: string) => Promise<Response>;
 /** jloom module id -> Spring Initializr dependency id(s). Doesn't need to be exhaustive: any
  * module's own mergeRecipes still run after this (see moduleApplier.ts) and the existing
  * AddDependency merge op is idempotent per (configuration, coordinate), so it silently no-ops
- * for anything Initializr already added — this table only picks a good *starting* set. */
+ * for anything Initializr already added — this table only picks a good *starting* set.
+ *
+ * Deliberately NOT mapping jwt-auth: verified end to end that Initializr's own "security" +
+ * "oauth2-resource-server" combination bundles into spring-boot-starter-security-oauth2-
+ * resource-server, a different artifact than the standalone spring-boot-starter-oauth2-
+ * resource-server jwt-auth's own SecurityConfig/JwtDecoder wiring was built and tested
+ * against (jwt-auth's own merges/gradle.yml already adds the correct one - real
+ * ./gradlew test runs of user-service showed every security-related test failing with 403
+ * until this mapping entry was removed). Trust the already-proven fragment over guessing at
+ * Initializr's bundling for anything that already has working coverage. */
 export const INITIALIZR_DEPENDENCY_MAP: Record<string, string[]> = {
   postgres: ["data-jpa", "postgresql"],
   mysql: ["data-jpa", "mysql"],
@@ -20,7 +29,6 @@ export const INITIALIZR_DEPENDENCY_MAP: Record<string, string[]> = {
   flyway: ["flyway"],
   "flyway-mysql": ["flyway"],
   validation: ["validation"],
-  "jwt-auth": ["security", "oauth2-resource-server"],
   "caching-caffeine": ["cache"],
   "caching-redis": ["cache", "data-redis"],
   "otel-tracing": ["actuator", "distributed-tracing", "prometheus"],

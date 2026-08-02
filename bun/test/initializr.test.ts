@@ -14,11 +14,15 @@ test("initializrDependenciesFor always includes web and maps known capability mo
   assert.ok(deps.includes("data-jpa"));
   assert.ok(deps.includes("postgresql"));
   assert.ok(deps.includes("flyway"));
-  assert.ok(deps.includes("security"));
-  assert.ok(deps.includes("oauth2-resource-server"));
   assert.ok(deps.includes("actuator"));
   assert.ok(deps.includes("distributed-tracing"));
   assert.ok(deps.includes("prometheus"));
+  // jwt-auth intentionally does NOT map here - see the comment in initializr.ts. Initializr's
+  // "security"+"oauth2-resource-server" combination bundles into a different artifact than
+  // jwt-auth's own SecurityConfig wiring (verified against a real failing test run); jwt-auth's
+  // own merges/gradle.yml is the authoritative source for those dependencies.
+  assert.ok(!deps.includes("security"));
+  assert.ok(!deps.includes("oauth2-resource-server"));
 });
 
 test("initializrDependenciesFor ignores modules with no known mapping (e.g. aop, business-specific service modules)", () => {
