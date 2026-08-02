@@ -19,10 +19,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class IdentityControllerTest {
     @Autowired
     private MockMvc mockMvc;
-
-
-
-
     @MockitoBean
     private JwtIssuer jwtIssuer;
     @Test

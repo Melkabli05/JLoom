@@ -1,5 +1,14 @@
+# identity-service 2.0.0 -> 2.0.1: fixes a real security hole. IdentityController's POST /tokens,
+# whenever user-service.base-url is blank (the DEFAULT — the prompt defaults to ""), issued a
+# fully valid, signed JWT for ANY username in the request body with NO password check at all.
+# Fixed by failing closed: a blank base-url now makes /tokens refuse to issue tokens (503)
+# instead of silently trusting the caller. No automated `jloom upgrade` recipe exists for this —
+# the merge/upgrade recipe system's CreateTextFile only substitutes a module's own prompt
+# answers, not project-level tokens like {{package}}, so an upgrade recipe can't emit a
+# regenerated, correctly-packaged IdentityController.java. Anyone on 2.0.0 must manually apply
+# this fix (see the source for the corrected /tokens method) or regenerate the service.
 id: identity-service
-version: 2.0.0
+version: 2.0.1
 requires: [capability:http-api, capability:auth]
 conflicts: []
 prompts:

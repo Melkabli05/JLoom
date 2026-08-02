@@ -43,7 +43,8 @@ class IdentityController {
             throw new IllegalArgumentException("username must not be blank");
         }
         if (userServiceBaseUrl.isBlank()) {
-            return new TokenResponse(issuer.issue(request.username()));
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "identity-service has no user-service.base-url configured, so it cannot verify credentials — refusing to issue a token");
         }
         VerifiedPrincipal verified = verifyAgainstUserService(request.username(), request.password());
         if (verified == null) {
@@ -65,10 +66,6 @@ class IdentityController {
             return null;
         }
     }
-
-
-
-
     @GetMapping("/me")
     MeResponse me(@AuthenticationPrincipal Jwt jwt) {
         return new MeResponse(jwt.getSubject());

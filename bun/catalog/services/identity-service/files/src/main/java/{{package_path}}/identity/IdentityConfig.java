@@ -28,13 +28,6 @@ class IdentityConfig {
     Clock systemClock() {
         return Clock.systemUTC();
     }
-
-
-
-
-
-
-
     @Bean
     JWKSource<SecurityContext> jwkSource(@Value("${jwt.private-key:}") String privateKeyPem,
                                          @Value("${jwt.public-key:}") String publicKeyPem) throws NoSuchAlgorithmException {

@@ -8,11 +8,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-
-
-
-
-
 public class JwtIssuer {
     private final JwtEncoder encoder;
     private final String issuer;

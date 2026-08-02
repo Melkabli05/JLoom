@@ -43,9 +43,6 @@ class IdentityServiceTest {
         String token = issuer.issue("alice");
         Jwt decoded = decoderFor(keyPair).decode(token);
         assertEquals("alice", decoded.getSubject());
-
-
-
         assertEquals("test-issuer", decoded.getClaimAsString("iss"));
     }
     @Test
