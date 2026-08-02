@@ -1,7 +1,9 @@
-package {{package}}.web;
+package {{package}}.presentation.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,7 +15,11 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.util.List;
 
+// Lowest precedence: this is the generic fallback (its Exception.class handler must never win
+// over a more specific @RestControllerAdvice, e.g. jwt-auth's SecurityExceptionHandler, which
+// otherwise depends on undefined bean-registration/component-scan order to be picked first).
 @RestControllerAdvice
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);

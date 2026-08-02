@@ -1,5 +1,5 @@
 id: notification-service
-version: 3.6.0
+version: 3.7.0
 requires: [base, capability:http-api, capability:relational-db, capability:validation, capability:auth, capability:async, capability:scheduling]
 conflicts: []
 prompts:

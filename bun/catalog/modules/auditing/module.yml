@@ -5,13 +5,13 @@
 # need an AuditorAware<T> bean tied to a real principal type, which doesn't exist generically —
 # left for the security/business module that has one.
 id: auditing
-version: 1.0.0
+version: 1.1.0
 requires: [capability:relational-db]
 conflicts: []
 provides: capability:auditing
 prompts: []
 mergeRecipes: []
 fileTemplates:
-  - src/main/java/{{package_path}}/config/AuditingConfig.java
-  - src/main/java/{{package_path}}/domain/AuditableEntity.java
+  - src/main/java/{{package_path}}/infrastructure/configuration/AuditingConfig.java
+  - src/main/java/{{package_path}}/domain/model/AuditableEntity.java
 upgrades: []

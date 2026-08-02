@@ -3,12 +3,12 @@
 # ThreadPoolTaskScheduler with sensible defaults once scheduling is enabled — no custom bean
 # needed unless pool sizing becomes a real requirement later.
 id: scheduling
-version: 1.0.0
+version: 1.1.0
 requires: []
 conflicts: []
 provides: capability:scheduling
 prompts: []
 mergeRecipes: []
 fileTemplates:
-  - src/main/java/{{package_path}}/config/SchedulingConfig.java
+  - src/main/java/{{package_path}}/infrastructure/configuration/SchedulingConfig.java
 upgrades: []

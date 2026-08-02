@@ -8,10 +8,10 @@
 # Has no mergeRecipes: applying it via `add` (not `new`) exercises the file-only-module path,
 # which relies on ProjectState.basePackage to substitute {{package_path}} correctly.
 id: problem-details
-version: 1.1.0
+version: 1.2.0
 requires: []
 conflicts: []
 prompts: []
 mergeRecipes: []
 fileTemplates:
-  - src/main/java/{{package_path}}/web/GlobalExceptionHandler.java
+  - src/main/java/{{package_path}}/presentation/exception/GlobalExceptionHandler.java

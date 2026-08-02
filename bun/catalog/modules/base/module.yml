@@ -6,11 +6,12 @@
 # git can't track empty directories) matching the layered convention every catalog service
 # already follows nested under its own feature package. The sub-packages below (domain/model,
 # application/service, infrastructure/persistence, infrastructure/configuration,
-# presentation/controller, presentation/dto, presentation/mapper) mirror exactly what
-# user-service/notification-service/file-service already use — folders only, no sample code, so
-# a new feature has every conventional home ready without the user first deciding on layout.
+# presentation/controller, presentation/dto, presentation/mapper, presentation/exception) mirror
+# exactly what user-service/notification-service/file-service (and, for presentation/exception,
+# the jwt-auth and problem-details modules) already use — folders only, no sample code, so a new
+# feature has every conventional home ready without the user first deciding on layout.
 id: base
-version: 2.2.0
+version: 2.3.0
 requires: []
 conflicts: []
 prompts: []
@@ -31,3 +32,4 @@ fileTemplates:
   - src/main/java/{{package_path}}/presentation/controller/package-info.java
   - src/main/java/{{package_path}}/presentation/dto/package-info.java
   - src/main/java/{{package_path}}/presentation/mapper/package-info.java
+  - src/main/java/{{package_path}}/presentation/exception/package-info.java

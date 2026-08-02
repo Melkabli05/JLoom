@@ -3,12 +3,12 @@
 # ThreadPoolTaskExecutor with sensible defaults once async is enabled — no custom executor bean
 # needed unless pool sizing becomes a real requirement later.
 id: async
-version: 1.0.0
+version: 1.1.0
 requires: []
 conflicts: []
 provides: capability:async
 prompts: []
 mergeRecipes: []
 fileTemplates:
-  - src/main/java/{{package_path}}/config/AsyncConfig.java
+  - src/main/java/{{package_path}}/infrastructure/configuration/AsyncConfig.java
 upgrades: []
