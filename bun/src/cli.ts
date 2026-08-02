@@ -1,21 +1,25 @@
 #!/usr/bin/env bun
 import { createInterface } from "node:readline/promises";
-import { runAdd } from "./commands/add.ts";
-import { runConfig } from "./commands/config.ts";
-import { runInfo } from "./commands/info.ts";
-import { runList } from "./commands/list.ts";
-import { runNew } from "./commands/new.ts";
-import { runStatus } from "./commands/status.ts";
-import { runUpgrade } from "./commands/upgrade.ts";
+import {
+  runAdd,
+  runConfig,
+  runInfo,
+  runList,
+  runNew,
+  runStatus,
+  upgrade,
+} from "./apply.ts";
 import { createReplIo } from "./lineSource.ts";
 import { runRepl } from "./repl.ts";
-
-// ===== 3-line inline color helper (replaces output.ts) =====
-const color = process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
-const c = (code: string, s: string): string => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
+import { output } from "./wizard.ts";
 
 // ===== argv parser (replaces Commander + program.ts) =====
-function parseArgs(argv: string[]): { cmd: string | undefined; flags: Record<string, string>; positional: string[] } {
+
+function parseArgs(argv: string[]): {
+  cmd: string | undefined;
+  flags: Record<string, string>;
+  positional: string[];
+} {
   const [, , ...rest] = argv;
   const flags: Record<string, string> = {};
   const positional: string[] = [];
@@ -69,15 +73,17 @@ function parseSetFlag(value: string, previous: Record<string, string>): Record<s
   const result = { ...previous };
   for (const pair of value.split(",")) {
     const eq = pair.indexOf("=");
-    if (eq > 0) {
-      result[pair.slice(0, eq)] = pair.slice(eq + 1);
-    }
+    if (eq > 0) result[pair.slice(0, eq)] = pair.slice(eq + 1);
   }
   return result;
 }
 
-// ===== dispatch (replaces program.ts) =====
-async function dispatch(cmd: string | undefined, flags: Record<string, string>, positional: string[]): Promise<void> {
+async function dispatch(
+  io: ReturnType<typeof createReplIo>,
+  cmd: string | undefined,
+  flags: Record<string, string>,
+  positional: string[],
+): Promise<void> {
   switch (cmd) {
     case undefined:
     case "help":
@@ -114,14 +120,14 @@ async function dispatch(cmd: string | undefined, flags: Record<string, string>, 
       runStatus(flags.project ?? ".");
       return;
     case "upgrade":
-      runUpgrade(flags.project ?? ".", flags.module, flags["dry-run"] === "true");
+      upgrade(flags.project ?? ".", flags.module, flags["dry-run"] === "true");
       return;
     case "config":
       runConfig();
       return;
     default:
-      console.error(c("31", `✗ unknown command: ${cmd}`));
-      console.error(c("2", "Run 'jloom help' for usage."));
+      console.error(output.err(`✗ unknown command: ${cmd}`));
+      console.error(output.hint("Run 'jloom help' for usage."));
       throw new Error(`unknown command: ${cmd}`);
   }
 }
@@ -134,10 +140,10 @@ try {
     await runRepl(io);
   } else {
     const { cmd, flags, positional } = parseArgs(process.argv);
-    await dispatch(cmd, flags, positional);
+    await dispatch(io, cmd, flags, positional);
   }
 } catch (err) {
-  console.error(c("31", `✗ ${err instanceof Error ? err.message : String(err)}`));
+  console.error(output.err(err instanceof Error ? err.message : String(err)));
   process.exit(1);
 }
 
