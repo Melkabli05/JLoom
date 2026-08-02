@@ -1,0 +1,14 @@
+# caching-redis 1.1.0 -> 1.2.0: adds the missing spring.data.redis.password/timeout/
+# connect-timeout keys (see module.yml for the full rationale). This recipe only covers the
+# application.yml side — it can't also regenerate CacheConfig.java's JSON-serialization fix,
+# since the merge/upgrade recipe system's CreateTextFile only substitutes a module's own prompt
+# answers, not project-level tokens like {{package}}, so it can't emit a regenerated,
+# correctly-packaged Java file. Anyone upgrading from 1.1.0 should manually apply the
+# CacheConfig.java change too (see the current template).
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.data.redis
+    yaml: |
+      password: ""
+      timeout: 2s
+      connect-timeout: 2s
+    filePattern: "**/application.yml"

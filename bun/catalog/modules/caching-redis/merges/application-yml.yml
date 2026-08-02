@@ -1,3 +1,8 @@
+# timeout/connect-timeout are both unset (unbounded) by Spring Boot's own defaults — confirmed
+# against the current spring-boot-data-redis source (DataRedisProperties): both fields are
+# @Nullable with no default Duration assigned. Left unbounded, a network partition or a wedged
+# server can hang a request indefinitely instead of failing fast; 2s each is a reasonable
+# production-safe default for a cache (never the source of truth) that's easy to override.
 - org.openrewrite.yaml.MergeYaml:
     key: $.spring
     yaml: |
@@ -5,6 +10,9 @@
         redis:
           host: localhost
           port: 6379
+          password: ""
+          timeout: 2s
+          connect-timeout: 2s
       cache:
         redis:
           time-to-live: 10m
