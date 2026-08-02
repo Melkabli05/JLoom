@@ -2,6 +2,50 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { catalog, validate, findUpgradePath } from "../src/catalog.ts";
 
+// ===== Module catalog: load, validate, findUpgradePath =====
+
+test("catalog loads all 20 module manifests from the bundled index", () => {
+  const ids = [...catalog.modules.keys()].sort();
+  assert.ok(ids.includes("base"));
+  assert.ok(ids.includes("postgres"));
+  assert.ok(ids.includes("jwt-auth"));
+  assert.ok(catalog.modules.size >= 20);
+});
+
+test("catalog loads all 4 services from services.yml", () => {
+  const ids = [...catalog.services.keys()].sort();
+  assert.deepStrictEqual(ids, ["file-service", "identity-service", "notification-service", "user-service"].sort());
+});
+
+test("catalog loads all 4 archetypes from archetypes/archetypes.yml", () => {
+  const ids = [...catalog.archetypes.keys()].sort();
+  assert.deepStrictEqual(
+    ids,
+    ["identity-with-user", "notification-stack", "postgres-flyway-service", "postgres-service"].sort(),
+  );
+});
+
+test("service modules list is non-empty and includes the base module", () => {
+  const svc = catalog.services.get("notification-service")!;
+  assert.ok(svc.modules.length > 0);
+  assert.ok(svc.modules.includes("base"));
+});
+
+test("archetype modules and answers parse as expected", () => {
+  const archetype = catalog.archetypes.get("identity-with-user")!;
+  assert.ok(archetype.modules.includes("identity-service"));
+  assert.ok(archetype.modules.includes("user-service"));
+  assert.strictEqual(archetype.answers["postgres.db_name"], "app");
+});
+
+test("find returns undefined for unknown ids without throwing", () => {
+  assert.strictEqual(catalog.modules.get("does-not-exist"), undefined);
+  assert.strictEqual(catalog.services.get("does-not-exist"), undefined);
+  assert.strictEqual(catalog.archetypes.get("does-not-exist"), undefined);
+});
+
+// ===== upgrade path walking =====
+
 test("upgrade path chains multiple steps from old version to current", () => {
   const postgres = catalog.modules.get("postgres")!;
   assert.ok(postgres.upgrades.length > 0);
@@ -25,6 +69,8 @@ test("upgrade path is empty when already at current version", () => {
 test("upgrade path is empty when no chain reaches current version", () => {
   assert.deepStrictEqual(findUpgradePath(catalog, "postgres", "0.0.0-not-a-version"), []);
 });
+
+// ===== validation (requires/conflicts) =====
 
 test("validate returns empty for a self-consistent batch", () => {
   assert.deepStrictEqual(validate(catalog, [], ["base"]), []);
