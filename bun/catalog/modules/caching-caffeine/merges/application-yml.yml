@@ -1,7 +1,16 @@
+# recordStats is a bare Caffeine spec key (no value) — confirmed against Caffeine's own
+# CaffeineSpec parser. Once set, Spring Boot's CaffeineCacheMeterBinderProvider (auto-registered
+# whenever Caffeine + Micrometer are both on the classpath, no code required) exposes hit/miss/
+# eviction/load-time metrics under /actuator/metrics/cache.* — this project's base module already
+# bundles actuator + Prometheus, so this is a real, zero-extra-code observability win. Caveat:
+# CacheMetricsRegistrarConfiguration only binds caches that already exist at startup — a
+# dynamically-created cache (the default here, since no spring.cache.cache-names is set) won't
+# show up in Micrometer until something has actually called it once. List your cache names
+# explicitly under spring.cache.cache-names if you want metrics available from boot.
 - org.openrewrite.yaml.MergeYaml:
     key: $.spring
     yaml: |
       cache:
         caffeine:
-          spec: "maximumSize=500,expireAfterWrite=600s"
+          spec: "maximumSize=500,expireAfterWrite=600s,recordStats"
     filePattern: "**/application.yml"

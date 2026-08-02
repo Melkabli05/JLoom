@@ -1,0 +1,11 @@
+# caching-caffeine 1.1.0 -> 1.2.0: adds `recordStats` to the Caffeine spec string (see
+# module.yml/application-yml.yml for the full rationale). Unlike the caching-redis and
+# identity-service upgrades this session, this one needs no Java-file changes at all — the whole
+# fix is a single application.yml property — so it's a normal, fully automated upgrade recipe.
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring
+    yaml: |
+      cache:
+        caffeine:
+          spec: "maximumSize=500,expireAfterWrite=600s,recordStats"
+    filePattern: "**/application.yml"

@@ -5,8 +5,16 @@
 # @EnableCaching deliberately lives on its own CacheConfig class, not on Application.java — the
 # official Spring Boot caching docs warn against annotating the main class, since that makes
 # caching a mandatory feature even when running a test suite that never touches it.
+#
+# caching-caffeine 1.1.0 -> 1.2.0: added `recordStats` to the Caffeine spec string — see
+# merges/application-yml.yml for the full rationale (verified against Caffeine's own CaffeineSpec
+# parser source and Spring Boot's CaffeineCacheMeterBinderProvider auto-configuration). No Java
+# changes: CacheConfig stays a bare @EnableCaching marker, since the spec-string property is
+# already the Spring Boot-recommended, zero-code path for basic Caffeine tuning — unlike
+# caching-redis, there's no JDK-serialization trap to work around here (Caffeine is in-process,
+# nothing is ever serialized), so there's no need to reach for a custom CacheManager bean.
 id: caching-caffeine
-version: 1.1.0
+version: 1.2.0
 requires: []
 conflicts: [caching-redis]
 provides: capability:caching
@@ -17,4 +25,7 @@ mergeRecipes:
   - merges/application-yml.yml
 fileTemplates:
   - src/main/java/{{package_path}}/infrastructure/configuration/CacheConfig.java
-upgrades: []
+upgrades:
+  - from: 1.1.0
+    to: 1.2.0
+    recipe: recipes/v1.1.0-to-v1.2.0.yml
