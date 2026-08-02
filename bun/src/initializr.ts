@@ -1,10 +1,11 @@
 import { existsSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
+import { fetchInitializrMetadata, isVersionCompatible } from "./initializrMetadata.ts";
 
 const BOOT_VERSION = "4.1.0";
 const JAVA_VERSION = "25";
 
-export type FetchLike = (url: string) => Promise<Response>;
+export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
 /** `jwt-auth` is intentionally NOT here: Initializr's "security" + "oauth2-resource-server"
  * combo bundles into spring-boot-starter-security-oauth2-resource-server, which is not
@@ -74,8 +75,27 @@ export async function generateSpringBootProject(
   targetDir: string,
   opts: InitializrOptions,
   fetchImpl: FetchLike = fetch,
-): Promise<void> {
-  const url = buildInitializrUrl(opts);
+): Promise<{ warnings: string[] }> {
+  const metadata = await fetchInitializrMetadata(fetchImpl);
+  if (!metadata.bootVersionIds.has(BOOT_VERSION)) {
+    throw new Error(
+      `Spring Initializr no longer offers bootVersion ${BOOT_VERSION} - jloom needs a maintenance update to a currently supported version.`,
+    );
+  }
+
+  const warnings: string[] = [];
+  const compatibleDependencies = opts.dependencies.filter((dep) => {
+    const range = metadata.dependencyRanges.get(dep);
+    const compatible = isVersionCompatible(BOOT_VERSION, range);
+    if (!compatible) {
+      warnings.push(
+        `'${dep}' isn't compatible with Spring Boot ${BOOT_VERSION} (requires ${range}) and was skipped.`,
+      );
+    }
+    return compatible;
+  });
+
+  const url = buildInitializrUrl({ ...opts, dependencies: compatibleDependencies });
   const res = await fetchImpl(url);
   if (!res.ok) {
     throw new Error(`Spring Initializr request failed (${res.status} ${res.statusText}): ${url}`);
@@ -92,4 +112,6 @@ export async function generateSpringBootProject(
   const yamlFile = path.join(targetDir, "src/main/resources/application.yaml");
   const ymlFile = path.join(targetDir, "src/main/resources/application.yml");
   if (existsSync(yamlFile) && !existsSync(ymlFile)) renameSync(yamlFile, ymlFile);
+
+  return { warnings };
 }

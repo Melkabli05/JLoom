@@ -71,7 +71,7 @@ function copyModuleFiles(manifest: ModuleManifest, targetRoot: string, tokens: R
 }
 
 export type ApplyResult =
-  | { kind: "applied"; output: string }
+  | { kind: "applied"; output: string; warnings?: string[] }
   | { kind: "dryRun"; diff: string }
   | { kind: "rejected"; problems: string[] }
   | { kind: "failed"; output: string };
@@ -131,6 +131,7 @@ interface FinishOpts {
   out: string;
   basePackage: string | undefined;
   projectName: string | undefined;
+  warnings?: string[];
 }
 
 function finish(opts: FinishOpts): ApplyResult {
@@ -155,7 +156,9 @@ function finish(opts: FinishOpts): ApplyResult {
     });
   }
   saveState(opts.targetProject, updated);
-  return { kind: "applied", output: opts.out };
+  return opts.warnings !== undefined && opts.warnings.length > 0
+    ? { kind: "applied", output: opts.out, warnings: opts.warnings }
+    : { kind: "applied", output: opts.out };
 }
 
 export interface ApplyOpts {
@@ -193,6 +196,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
     }
   }
 
+  let initializrWarnings: string[] = [];
   if (!opts.dryRun) {
     for (const id of opts.moduleIds) {
       const manifest = catalog.modules.get(id);
@@ -202,7 +206,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
           const resolvedBasePackage = tokenState.basePackage ?? DEFAULT_BASE_PACKAGE;
           const resolvedProjectName = tokenState.projectName ?? path.basename(opts.targetProject);
           try {
-            await generateSpringBootProject(
+            const result = await generateSpringBootProject(
               opts.targetProject,
               {
                 groupId: deriveGroupId(resolvedBasePackage),
@@ -213,6 +217,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
               },
               fetchImpl,
             );
+            initializrWarnings = result.warnings;
           } catch (err) {
             return { kind: "failed", output: err instanceof Error ? err.message : String(err) };
           }
@@ -240,6 +245,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
         out: "Dry run — no changes written.",
         basePackage: opts.basePackage,
         projectName: opts.projectName,
+        warnings: initializrWarnings,
       });
     }
     try {
@@ -274,6 +280,7 @@ export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
     out: recipeOutput,
     basePackage: opts.basePackage,
     projectName: opts.projectName,
+    warnings: initializrWarnings,
   });
 }
 
@@ -497,6 +504,15 @@ export async function runAdd(opts: AddOpts): Promise<void> {
 
   switch (result.kind) {
     case "applied":
+      if (result.warnings !== undefined) {
+        for (const warning of result.warnings) {
+          if (isInteractive()) {
+            clack.log.warn(warning);
+          } else {
+            console.log(output.err(warning));
+          }
+        }
+      }
       console.log(output.ok(`Applied: [${ids.join(", ")}]`));
       break;
     case "dryRun":
@@ -615,6 +631,15 @@ export async function runNew(options: NewOptions): Promise<void> {
 
   switch (result.kind) {
     case "applied":
+      if (result.warnings !== undefined) {
+        for (const warning of result.warnings) {
+          if (interactiveWizard) {
+            clack.log.warn(warning);
+          } else {
+            console.log(output.err(warning));
+          }
+        }
+      }
       if (interactiveWizard) {
         clack.outro(`Created ${target}. Next: cd ${target} && ./gradlew test`);
       } else {
