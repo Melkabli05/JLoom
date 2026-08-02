@@ -25,6 +25,12 @@ export function readText(id: string, relativePath: string): string | undefined {
   return resolved === undefined ? undefined : readFileSync(resolved, "utf8");
 }
 
+/** Raw bytes, no encoding — required for binary templates (gradle-wrapper.jar, icons, etc.). */
+export function readBytes(id: string, relativePath: string): Buffer | undefined {
+  const resolved = resolvePath(id, relativePath);
+  return resolved === undefined ? undefined : readFileSync(resolved);
+}
+
 export function indexPaths(): string[] {
   return ROOTS.map((root) => path.join(CATALOG_ROOT, root, "modules.yml"));
 }
