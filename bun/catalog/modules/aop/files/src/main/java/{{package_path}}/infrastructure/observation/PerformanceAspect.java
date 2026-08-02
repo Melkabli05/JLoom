@@ -1,4 +1,5 @@
 package {{package}}.infrastructure.observation;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
+
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 30)
@@ -19,6 +21,7 @@ class PerformanceAspect {
     private static final Logger log = LoggerFactory.getLogger(PerformanceAspect.class);
     private final long thresholdMs;
     private final Counter slowCalls;
+
     PerformanceAspect(@Value("${jloom.performance.threshold-ms:500}") long thresholdMs,
                       MeterRegistry registry) {
         this.thresholdMs = thresholdMs;
@@ -26,6 +29,7 @@ class PerformanceAspect {
                 .description("Calls exceeding the configured jloom.performance.threshold-ms")
                 .register(registry);
     }
+
     @Around("@within(org.springframework.stereotype.Service) || @within(org.springframework.web.bind.annotation.RestController)")
     Object time(ProceedingJoinPoint pjp) throws Throwable {
         long start = System.nanoTime();
