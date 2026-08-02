@@ -1,44 +1,146 @@
-#!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
+#!/usr/bin/env bun
 import { createInterface } from "node:readline/promises";
 import { createContext } from "./context.ts";
+import { runAdd } from "./commands/add.ts";
+import { runConfig } from "./commands/config.ts";
+import { runInfo } from "./commands/info.ts";
+import { runList } from "./commands/list.ts";
+import { runNew } from "./commands/new.ts";
+import { runStatus } from "./commands/status.ts";
+import { runUpgrade } from "./commands/upgrade.ts";
 import { createReplIo } from "./lineSource.ts";
-import { buildProgram, execute } from "./program.ts";
-import { replCompleter, runRepl } from "./repl.ts";
+import { runRepl } from "./repl.ts";
 
-const historyFile = path.join(os.homedir(), ".jloom", "history");
+// ===== 3-line inline color helper (replaces output.ts) =====
+const color = process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
+const c = (code: string, s: string): string => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
 
-function loadHistory(): string[] {
-  if (!existsSync(historyFile)) {
-    return [];
+// ===== argv parser (replaces Commander + program.ts) =====
+function parseArgs(argv: string[]): { cmd: string | undefined; flags: Record<string, string>; positional: string[] } {
+  const [, , ...rest] = argv;
+  const flags: Record<string, string> = {};
+  const positional: string[] = [];
+  let cmd: string | undefined;
+  let i = 0;
+  if (rest.length > 0 && !rest[0]!.startsWith("-")) {
+    cmd = rest[0];
+    i = 1;
   }
-  return readFileSync(historyFile, "utf8").split("\n").filter((line) => line !== "");
+  for (; i < rest.length; i++) {
+    const tok = rest[i]!;
+    if (tok.startsWith("--")) {
+      const key = tok.slice(2);
+      const next = rest[i + 1];
+      if (next !== undefined && !next.startsWith("-")) {
+        flags[key] = next;
+        i++;
+      } else {
+        flags[key] = "true";
+      }
+    } else {
+      positional.push(tok);
+    }
+  }
+  return { cmd, flags, positional };
 }
 
-function persistHistory(history: string[]): void {
-  mkdirSync(path.dirname(historyFile), { recursive: true });
-  writeFileSync(historyFile, `${history.join("\n")}\n`, "utf8");
+const USAGE = `jloom — generate and evolve production-ready backends.
+
+Usage:
+  jloom [command] [options]
+
+Commands:
+  new        Create a new project (interactive or via flags)
+  add        Add a module to an existing project
+  list       List available modules, services, or archetypes
+  info       Show what a module does before applying it
+  status     Show applied modules and any newer versions
+  upgrade    Pull newer versions of one or more modules
+  config     Print the resolved jloom configuration
+  help       Show this message
+
+Examples:
+  jloom new --name my-app --service user-service --base-package com.acme.demo
+  jloom add postgres flyway --project ./my-app
+  jloom list
+  jloom info --module postgres
+  jloom upgrade --dry-run`;
+
+function parseSetFlag(value: string, previous: Record<string, string>): Record<string, string> {
+  const result = { ...previous };
+  for (const pair of value.split(",")) {
+    const eq = pair.indexOf("=");
+    if (eq > 0) {
+      result[pair.slice(0, eq)] = pair.slice(eq + 1);
+    }
+  }
+  return result;
+}
+
+// ===== dispatch table (replaces program.ts) =====
+async function dispatch(cmd: string | undefined, flags: Record<string, string>, positional: string[], ctx: ReturnType<typeof createContext>): Promise<void> {
+  switch (cmd) {
+    case undefined:
+    case "help":
+      console.log(USAGE);
+      return;
+    case "new":
+      await runNew(ctx, io, {
+        name: flags.name,
+        service: flags.service,
+        basePackage: flags["base-package"] ?? "com.example.app",
+        archetype: flags.archetype,
+        database: flags.database,
+        capabilities: flags.capabilities,
+        cacheProvider: flags["cache-provider"],
+        dryRun: flags["dry-run"] === "true",
+        quiet: flags.quiet === "true",
+      });
+      return;
+    case "add":
+      await runAdd(ctx, io, {
+        project: flags.project ?? ".",
+        moduleIds: positional,
+        set: flags.set ? parseSetFlag(flags.set, {}) : {},
+        dryRun: flags["dry-run"] === "true",
+      });
+      return;
+    case "list":
+      runList(ctx, flags.what ?? "modules");
+      return;
+    case "info":
+      await runInfo(ctx, io, flags.module);
+      return;
+    case "status":
+      runStatus(ctx, flags.project ?? ".");
+      return;
+    case "upgrade":
+      runUpgrade(ctx, flags.project ?? ".", flags.module, flags["dry-run"] === "true");
+      return;
+    case "config":
+      runConfig();
+      return;
+    default:
+      console.error(c("31", `✗ unknown command: ${cmd}`));
+      console.error(c("2", "Run 'jloom help' for usage."));
+      throw new Error(`unknown command: ${cmd}`);
+  }
 }
 
 const ctx = createContext();
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  completer: replCompleter,
-  history: loadHistory(),
-  historySize: 1000,
-});
-rl.on("history", persistHistory);
+const rl = createInterface({ input: process.stdin, output: process.stdout });
 const io = createReplIo(rl);
 
-if (process.argv.length <= 2) {
-  await runRepl(ctx, io);
-  rl.close();
-  process.exit(0);
-} else {
-  const exitCode = await execute(buildProgram(ctx, io), process.argv, "node");
-  rl.close();
-  process.exit(exitCode);
+try {
+  if (process.argv.length <= 2) {
+    await runRepl(ctx, io);
+  } else {
+    const { cmd, flags, positional } = parseArgs(process.argv);
+    await dispatch(cmd, flags, positional, ctx);
+  }
+} catch (err) {
+  console.error(c("31", `✗ ${err instanceof Error ? err.message : String(err)}`));
+  process.exit(1);
 }
+
+rl.close();
