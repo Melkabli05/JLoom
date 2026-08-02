@@ -5,3 +5,23 @@
     artifactId: archunit-junit5
     version: 1.4.1
     configuration: testImplementation
+# Production-readiness observability bundle — every generated project is scrape-ready and
+# trace-ready on day 1, with zero opt-in. These four are the same set the otel-tracing module
+# already pulls in (intentionally, so OpenRewrite's AddDependency dedup makes adding them
+# again a no-op rather than a conflict).
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-actuator
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: io.micrometer
+    artifactId: micrometer-registry-prometheus
+    configuration: runtimeOnly
+- org.openrewrite.gradle.AddDependency:
+    groupId: io.micrometer
+    artifactId: micrometer-tracing-bridge-otel
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: io.opentelemetry
+    artifactId: opentelemetry-exporter-otlp
+    configuration: runtimeOnly

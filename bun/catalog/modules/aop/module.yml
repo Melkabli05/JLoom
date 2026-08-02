@@ -1,12 +1,13 @@
 # aop — Spring AOP via spring-boot-starter-aspectj (renamed from spring-boot-starter-aop in
 # Spring Boot 4.0 — verified against the actual published Maven Central metadata, since
-# spring-boot-starter-aop's last release is only a 4.0.0 milestone), plus one real cross-cutting
-# aspect: method-level
-# execution timing for every @Service bean. This is deliberately the one AOP use case that's
-# useful in literally any application regardless of domain (perf visibility), rather than an
-# invented example with nothing to attach to.
+# spring-boot-starter-aop's last release is only a 4.0.0 milestone), wired into Spring Boot 4's
+# built-in Micrometer Observation infrastructure: an ObservedAspect bean plus an abstract
+# ObservedService base class. Every domain ServiceImpl that extends ObservedService gets
+# per-method Timer metrics + per-method tracing spans (auto-correlated with HTTP server spans
+# via the otel-tracing bridge), with automatic exception tagging — no hand-rolled aspect, no
+# per-method annotations, and the same single Timer/Span per method Spring's own docs recommend.
 id: aop
-version: 1.1.0
+version: 2.0.0
 requires: []
 conflicts: []
 provides: capability:aop
@@ -14,5 +15,6 @@ prompts: []
 mergeRecipes:
   - merges/gradle.yml
 fileTemplates:
-  - src/main/java/{{package_path}}/infrastructure/configuration/MethodTimingAspect.java
+  - src/main/java/{{package_path}}/infrastructure/observation/ObservedAspectConfig.java
+  - src/main/java/{{package_path}}/infrastructure/observation/ObservedService.java
 upgrades: []

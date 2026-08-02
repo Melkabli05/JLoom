@@ -205,12 +205,49 @@ function mergeAtPath(target: Record<string, unknown>, segments: string[], fragme
   return { ...target, [head]: mergeAtPath(child, rest, fragment) };
 }
 
-function mergeYamlContent(targetContent: string, op: { key: string; yaml: string }): string {
+function mergeYamlContent(targetContent: string, op: { key: string, yaml: string }): string {
   const loaded = yaml.load(targetContent);
   const targetDoc = isPlainObject(loaded) ? loaded : {};
-  const fragmentDoc = yaml.load(op.yaml);
+  const fragmentDoc = parseFragmentYaml(op.yaml, op.key);
   const merged = mergeAtPath(targetDoc, pathSegments(op.key), fragmentDoc);
   return yaml.dump(merged, { lineWidth: -1 });
+}
+
+// js-yaml's strict parser rejects YAML documents whose first non-empty line starts with `%`,
+// treating it as a directive-end marker. Two of jloom's catalog recipes legitimately want such
+// values — Spring Boot's `logging.pattern.level` log pattern (`%5p [...]`) is the canonical
+// example, where `%5p` is the log level token. Detect this case and reparse as a key/value
+// pair (the recipe's key becomes the JSON-encoded value's parent key), which carries the value
+// as a string-typed field and bypasses the directive-marker check entirely. The wrapper key is
+// then unwrapped before returning so mergeAtPath lands the value (not a wrapping object) at the
+// leaf path the recipe's `key` field declared.
+function parseFragmentYaml(text: string, opKey: string): unknown {
+  const tryLoad = (t: string) => yaml.load(t);
+  let parsed: unknown;
+  try {
+    parsed = tryLoad(text);
+  } catch {
+    const trimmed = text.replace(/^\s*\n/, "").trimStart();
+    if (trimmed.startsWith("%")) {
+      const leaf = opKey.split(".").pop() ?? "value";
+      parsed = tryLoad(`${leaf}: ${JSON.stringify(trimmed)}`);
+    } else {
+      throw new Error(`Failed to parse YAML fragment for recipe key '${opKey}'`);
+    }
+  }
+  // Unwrap the single-key wrapper we used to defeat the directive-marker check, so the fragment
+  // is the leaf value itself rather than `{leaf: value}`.
+  const leaf = opKey.split(".").pop() ?? "value";
+  if (
+    typeof parsed === "object" &&
+    parsed !== null &&
+    !Array.isArray(parsed) &&
+    Object.keys(parsed as Record<string, unknown>).length === 1 &&
+    Object.keys(parsed as Record<string, unknown>)[0] === leaf
+  ) {
+    return (parsed as Record<string, unknown>)[leaf];
+  }
+  return parsed;
 }
 
 function applyChangeKey(root: string, op: { oldPropertyKey: string; newPropertyKey: string; filePattern: string }): void {

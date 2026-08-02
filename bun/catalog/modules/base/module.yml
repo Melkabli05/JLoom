@@ -1,23 +1,27 @@
 # base — scaffolds the project via a real Spring Initializr call (see src/initializr.ts)
 # rather than jloom's own hand-maintained skeleton templates. What Initializr doesn't know how
 # to generate remains here: the ArchUnit layering-rules test file, the archunit-junit5
-# dependency it needs (Initializr's own catalog has no ArchUnit entry), and a starting
+# dependency it needs (Initializr's own catalog has no ArchUnit entry), a starting
 # domain/application/infrastructure/presentation package skeleton (via package-info.java, since
 # git can't track empty directories) matching the layered convention every catalog service
-# already follows nested under its own feature package. The sub-packages below (domain/model,
-# application/service, infrastructure/persistence, infrastructure/configuration,
+# already follows nested under its own feature package, AND the production-readiness
+# observability bundle (actuator + Prometheus registry + OTel trace bridge + OTLP exporter +
+# traceId/spanId-in-log correlation + actuator endpoint exposure + 100% trace sampling) so a
+# fresh project is scrape-ready and trace-ready with zero opt-in. The sub-packages below
+# (domain/model, application/service, infrastructure/persistence, infrastructure/configuration,
 # presentation/controller, presentation/dto, presentation/mapper, presentation/exception) mirror
 # exactly what user-service/notification-service/file-service (and, for presentation/exception,
 # the jwt-auth and problem-details modules) already use — folders only, no sample code, so a new
 # feature has every conventional home ready without the user first deciding on layout.
 id: base
-version: 2.3.0
+version: 3.0.0
 requires: []
 conflicts: []
 prompts: []
 provides: capability:http-api
 mergeRecipes:
   - merges/gradle.yml
+  - merges/application-yml.yml
 scaffold: true
 fileTemplates:
   - src/test/java/{{package_path}}/ArchitectureTest.java
