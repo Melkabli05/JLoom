@@ -25,3 +25,32 @@
     groupId: io.opentelemetry
     artifactId: opentelemetry-exporter-otlp
     configuration: runtimeOnly
+# Lombok + MapStruct for every generated project. Lombok compileOnly + annotationProcessor
+# (annotation-processor-only path is the canonical pattern since Lombok is bytecode-only).
+# MapStruct with lombok-mapstruct-binding so @Mapper sees Lombok-generated getters/setters
+# instead of throwing "no property named X" — the binding has to come AFTER lombok's
+# annotation processor in the classpath; OpenRewrite's AddDependency appends in declaration
+# order, so this ordering is load-bearing.
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.projectlombok
+    artifactId: lombok
+    configuration: compileOnly
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.projectlombok
+    artifactId: lombok
+    configuration: annotationProcessor
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.mapstruct
+    artifactId: mapstruct
+    version: 1.6.3
+    configuration: implementation
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.mapstruct
+    artifactId: mapstruct-processor
+    version: 1.6.3
+    configuration: annotationProcessor
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.projectlombok
+    artifactId: lombok-mapstruct-binding
+    version: 0.2.0
+    configuration: annotationProcessor
