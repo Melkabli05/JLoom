@@ -52,6 +52,23 @@ test("is idempotent - does not duplicate an already-present coordinate", () => {
   assert.strictEqual(twice.split("org.postgresql:postgresql").length - 1, 1);
 });
 
+test("the same coordinate under two different configurations both land (e.g. Lombok needs compileOnly AND annotationProcessor)", () => {
+  let content = addDependencyContent(BUILD_FILE, {
+    type: "org.openrewrite.gradle.AddDependency",
+    groupId: "org.projectlombok",
+    artifactId: "lombok",
+    configuration: "compileOnly",
+  });
+  content = addDependencyContent(content, {
+    type: "org.openrewrite.gradle.AddDependency",
+    groupId: "org.projectlombok",
+    artifactId: "lombok",
+    configuration: "annotationProcessor",
+  });
+  assert.ok(content.includes('compileOnly("org.projectlombok:lombok")'));
+  assert.ok(content.includes('annotationProcessor("org.projectlombok:lombok")'));
+});
+
 test("throws when there is no dependencies block to insert into", () => {
   assert.throws(() =>
     addDependencyContent("plugins { id(\"java\") }", {
