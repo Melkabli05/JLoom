@@ -13,4 +13,3 @@ modules:
   - notification-service
 answers:
   postgres.db_name: app
-  jwt-auth.jwt_secret: change-me-in-production-this-is-a-dev-only-default-32-chars-min

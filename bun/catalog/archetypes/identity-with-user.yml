@@ -1,10 +1,11 @@
 # identity-with-user — typical two-service starter: identity-service as the JWT issuer +
 # user-service as the consumer, wired together for real. identity-service's POST /tokens calls
 # user-service's internal credential-verification endpoint (see IdentityController) and issues a
-# JWT whose subject is the actual user id; jwt-auth (added here so user-service's
-# capability:auth requirement is actually satisfied — this archetype previously omitted it and
-# could never successfully generate) validates that token against the same shared `jwt.secret`
-# identity-service signs with.
+# JWT whose subject is the actual user id, signed with an RSA key pair. jwt-auth (added here so
+# user-service's capability:auth requirement is actually satisfied) validates that token via its
+# published JWKS — identity-service overrides jwt-auth's generic external jwk-set-uri default to
+# self-reference its own /.well-known/jwks.json (see identity-service's own application-yml
+# merge), since both services run in this one bundled project.
 modules:
   - postgres
   - flyway

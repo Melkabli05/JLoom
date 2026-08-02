@@ -16,10 +16,12 @@ services:
   - id: identity-service
     displayName: Identity Service
     description: >
-      JWT issuer with JWKS endpoint. Ships POST /tokens, GET /.well-known/jwks.json (empty for
-      HS256), and GET /me as a protected sample. Genuinely stateless (no database — nothing in
-      this service persists anything), so it doesn't carry a database module.
-    modules: [base, otel-tracing, problem-details, identity-service]
+      JWT issuer, signing with an RSA key pair and publishing a real JWKS. Ships POST /tokens,
+      GET /.well-known/jwks.json, and GET /me as a protected sample, validated the same way as
+      every other service (jwt-auth's SecurityConfig, against this service's own JWKS).
+      Genuinely stateless (no database — nothing in this service persists anything), so it
+      doesn't carry a database module.
+    modules: [base, jwt-auth, otel-tracing, problem-details, identity-service]
   - id: file-service
     displayName: File / Media Service
     description: >

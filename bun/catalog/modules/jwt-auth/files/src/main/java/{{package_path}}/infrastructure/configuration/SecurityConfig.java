@@ -14,13 +14,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,11 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
+                // /actuator/* — standard health/info probes.
                 auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
+                // /.well-known/jwks.json — the JWKS endpoint itself must be public, otherwise
+                // the resource server's own JwtDecoder can't fetch it to validate tokens.
+                auth.requestMatchers("/.well-known/jwks.json").permitAll();
                 for (String pathSpec : publicPaths(environment)) {
                     int separator = pathSpec.indexOf(':');
                     HttpMethod method = HttpMethod.valueOf(pathSpec.substring(0, separator));
@@ -64,10 +67,16 @@ public class SecurityConfig {
                 .toList();
     }
 
+    // Asymmetric validation against the issuer's published JWK Set — no shared secret to keep in
+    // sync across services (see Spring Security's own OAuth2 Resource Server reference docs,
+    // which call shared-secret symmetric validation "limited scenarios" for exactly this
+    // multi-service shape). Also attaches issuer validation via the same built-in
+    // JwtValidators.createDefaultWithIssuer used by Spring Boot's own auto-configuration.
     @Bean
-    public JwtDecoder jwtDecoder(@Value("${jwt.secret}") String secret) {
-        SecretKeySpec key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(key).build();
+    public JwtDecoder jwtDecoder(@Value("${jwt.jwk-set-uri}") String jwkSetUri, @Value("${jwt.issuer}") String issuer) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuer));
+        return decoder;
     }
 
     @Bean

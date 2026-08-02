@@ -3,15 +3,14 @@ package {{package}}.identity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -74,19 +73,12 @@ class IdentityController {
         }
     }
 
+    // Authentication/401 handling is entirely jwt-auth's SecurityConfig now (.anyRequest()
+    // .authenticated(), validated against this same service's own published JWKS) — no manual
+    // header parsing or token verification left here.
     @GetMapping("/me")
-    ResponseEntity<MeResponse> me(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        String token = authHeader.substring("Bearer ".length());
-        String subject;
-        try {
-            subject = issuer.verify(token);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        return ResponseEntity.ok(new MeResponse(subject));
+    MeResponse me(@AuthenticationPrincipal Jwt jwt) {
+        return new MeResponse(jwt.getSubject());
     }
 
     public record TokenRequest(String username, String password) {

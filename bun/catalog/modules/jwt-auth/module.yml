@@ -1,18 +1,22 @@
 # jwt-auth — adds Spring Security + OAuth2 Resource Server dependencies, `jwt.*` configuration,
 # and a working SecurityConfig: a genuine stateless JWT bearer-token resource server (JwtDecoder
-# validates against `jwt.secret`, a JwtAuthenticationConverter maps a `roles` claim to granted
-# authorities, method security is enabled for @PreAuthorize elsewhere). File templates and merge
-# recipes both apply within the same module batch, before any Gradle/OpenRewrite step runs — see
-# ModuleApplier — so there's no chicken-and-egg with the new dependencies this module also adds.
+# validates against a JWK Set published by an identity provider — asymmetric, no shared secret —
+# a JwtAuthenticationConverter maps a `roles` claim to granted authorities, method security is
+# enabled for @PreAuthorize elsewhere). File templates and merge recipes both apply within the
+# same module batch, before any Gradle/OpenRewrite step runs — see ModuleApplier — so there's no
+# chicken-and-egg with the new dependencies this module also adds.
 id: jwt-auth
-version: 2.1.0
+version: 3.0.0
 requires: []
 conflicts: []
 provides: capability:auth
 prompts:
-  - key: jwt_secret
-    type: secret
-    default: change-me-in-production-this-is-a-dev-only-default-32-chars-min
+  # Points at whichever identity provider issues tokens this resource server should trust — by
+  # default, jloom's own identity-service module. Override for real deployments (identity-service
+  # applies its own override to self-reference — see its merges/application-yml.yml).
+  - key: jwt_jwk_set_uri
+    type: string
+    default: http://localhost:8081/.well-known/jwks.json
 mergeRecipes:
   - merges/gradle.yml
   - merges/application-yml.yml

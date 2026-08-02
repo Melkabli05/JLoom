@@ -1,86 +1,93 @@
 package {{package}}.identity;
 
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
-import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IdentityServiceTest {
 
+    private static KeyPair generateKeyPair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        return generator.generateKeyPair();
+    }
+
+    private static JwtEncoder encoderFor(KeyPair keyPair) {
+        RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                .privateKey((RSAPrivateKey) keyPair.getPrivate())
+                .keyID(UUID.randomUUID().toString())
+                .build();
+        return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(rsaKey)));
+    }
+
+    private static JwtDecoder decoderFor(KeyPair keyPair) {
+        return NimbusJwtDecoder.withPublicKey((RSAPublicKey) keyPair.getPublic()).build();
+    }
+
     @Test
-    void issueThenVerifyRoundTrips() {
-        Clock fixed = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC"));
-        JwtIssuer issuer = new JwtIssuer(JwtIssuer.generateSecret(), "test-issuer", 3600, fixed);
+    void issueThenDecodeRoundTrips() throws Exception {
+        KeyPair keyPair = generateKeyPair();
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC());
 
         String token = issuer.issue("alice");
-        assertNotNull(token);
 
-        String subject = issuer.verify(token);
-        assertEquals("alice", subject);
+        Jwt decoded = decoderFor(keyPair).decode(token);
+        assertEquals("alice", decoded.getSubject());
+        // Spring's Jwt.getIssuer() strictly reads the iss claim as a URL — RFC 7519 defines it
+        // as StringOrURI but jloom's default issuer ("jloom-app") is a plain string, so use the
+        // generic claim accessor here rather than the typed convenience method.
+        assertEquals("test-issuer", decoded.getClaimAsString("iss"));
     }
 
     @Test
-    void verifyRejectsTamperedToken() {
-        Clock fixed = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC"));
-        JwtIssuer issuer = new JwtIssuer(JwtIssuer.generateSecret(), "test-issuer", 3600, fixed);
+    void decodeRejectsTokenSignedByADifferentKey() throws Exception {
+        KeyPair signingKeyPair = generateKeyPair();
+        KeyPair otherKeyPair = generateKeyPair();
+        JwtIssuer issuer = new JwtIssuer(encoderFor(signingKeyPair), "test-issuer", 3600, Clock.systemUTC());
 
         String token = issuer.issue("alice");
-        int lastIdx = token.length() - 1;
-        char flipped = token.charAt(lastIdx) == 'a' ? 'b' : 'a';
-        String tampered = token.substring(0, lastIdx) + flipped;
 
-        assertThrows(IllegalArgumentException.class, () -> issuer.verify(tampered));
+        assertThrows(JwtException.class, () -> decoderFor(otherKeyPair).decode(token));
     }
 
     @Test
-    void verifyRejectsExpiredToken() {
-        Clock start = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC"));
-        byte[] secret = JwtIssuer.generateSecret();
-        String token = new JwtIssuer(secret, "test-issuer", 60, start).issue("alice");
-
-        Clock later = Clock.fixed(start.instant().plusSeconds(120), ZoneId.of("UTC"));
-        JwtIssuer laterIssuer = new JwtIssuer(secret, "test-issuer", 60, later);
-
-        assertThrows(IllegalArgumentException.class, () -> laterIssuer.verify(token));
-    }
-
-    @Test
-    void issueWithRolesEmbedsARolesClaim() {
-        Clock fixed = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC"));
-        JwtIssuer issuer = new JwtIssuer(JwtIssuer.generateSecret(), "test-issuer", 3600, fixed);
+    void issueWithRolesEmbedsARolesClaim() throws Exception {
+        KeyPair keyPair = generateKeyPair();
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC());
 
         String token = issuer.issue("11111111-1111-1111-1111-111111111111", List.of("ADMIN"));
-        assertEquals("11111111-1111-1111-1111-111111111111", issuer.verify(token));
 
-        String payloadB64 = token.split("\\.")[1];
-        String payloadJson = new String(Base64.getUrlDecoder().decode(payloadB64), StandardCharsets.UTF_8);
-        assertTrue(payloadJson.contains("\"roles\":[\"ADMIN\"]"));
+        Jwt decoded = decoderFor(keyPair).decode(token);
+        assertEquals(List.of("ADMIN"), decoded.getClaimAsStringList("roles"));
     }
 
     @Test
-    void issueWithoutRolesOmitsTheRolesClaim() {
-        Clock fixed = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC"));
-        JwtIssuer issuer = new JwtIssuer(JwtIssuer.generateSecret(), "test-issuer", 3600, fixed);
+    void issueWithoutRolesOmitsTheRolesClaim() throws Exception {
+        KeyPair keyPair = generateKeyPair();
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC());
 
         String token = issuer.issue("alice");
 
-        String payloadB64 = token.split("\\.")[1];
-        String payloadJson = new String(Base64.getUrlDecoder().decode(payloadB64), StandardCharsets.UTF_8);
-        assertTrue(!payloadJson.contains("roles"));
-    }
-
-    @Test
-    void shortSecretIsRejected() {
-        assertThrows(IllegalArgumentException.class, () ->
-                new JwtIssuer(new byte[16], "test", 60, Clock.systemUTC()));
+        Jwt decoded = decoderFor(keyPair).decode(token);
+        assertNull(decoded.getClaimAsStringList("roles"));
     }
 }

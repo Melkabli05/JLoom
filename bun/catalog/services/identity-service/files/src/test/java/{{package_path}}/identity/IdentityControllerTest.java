@@ -2,59 +2,43 @@ package {{package}}.identity;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.Mockito.when;
+import {{package}}.infrastructure.configuration.SecurityConfig;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(IdentityController.class)
+@Import({SecurityConfig.class})
+@ImportAutoConfiguration(ServletWebSecurityAutoConfiguration.class)
 class IdentityControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    // IdentityController's POST /tokens still wires a JwtIssuer (which itself depends on
+    // IdentityConfig's JwtEncoder/JWKSource beans), but @WebMvcTest's slice doesn't pick those
+    // up — mock the issuer so the controller can be constructed for the /me tests below.
     @MockitoBean
-    private JwtIssuer issuer;
+    private JwtIssuer jwtIssuer;
 
     @Test
-    void missingAuthorizationHeaderIsUnauthorized() throws Exception {
+    void anonymousRequestIsUnauthorized() throws Exception {
         mockMvc.perform(get("/me"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void nonBearerAuthorizationHeaderIsUnauthorized() throws Exception {
-        mockMvc.perform(get("/me").header("Authorization", "Basic xyz"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void invalidTokenIsUnauthorizedWithoutLeakingTheVerificationFailureReason() throws Exception {
-        when(issuer.verify("bad-token")).thenThrow(new IllegalArgumentException("signature mismatch"));
-
-        mockMvc.perform(get("/me").header("Authorization", "Bearer bad-token"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.detail").doesNotExist())
-                .andExpect(jsonPath("$.subject").doesNotExist());
-    }
-
-    @Test
-    void expiredTokenIsUnauthorized() throws Exception {
-        when(issuer.verify("expired-token")).thenThrow(new IllegalArgumentException("JWT expired"));
-
-        mockMvc.perform(get("/me").header("Authorization", "Bearer expired-token"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void validTokenReturnsSubject() throws Exception {
-        when(issuer.verify("good-token")).thenReturn("alice");
-
-        mockMvc.perform(get("/me").header("Authorization", "Bearer good-token"))
+    void validFabricatedJwtReturnsSubject() throws Exception {
+        mockMvc.perform(get("/me").with(jwt().jwt(j -> j.subject("alice"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.subject").value("alice"));
     }

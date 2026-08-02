@@ -3,9 +3,18 @@
     yaml: |
       issuer: "{{jwt_issuer}}"
       token-ttl-seconds: 3600
-      secret: "{{jwt_secret}}"
+      private-key: "{{jwt_private_key}}"
+      public-key: "{{jwt_public_key}}"
       public-paths:
         identity-service: "POST:/tokens"
+    filePattern: "**/application.yml"
+# Overrides jwt-auth's own generic external-facing jwk-set-uri default: identity-service is both
+# issuer and (via jwt-auth, now a required co-module) resource server for its own tokens, so it
+# validates against its own published JWKS rather than some other service's. A separate MergeYaml
+# targeting this one leaf key so it doesn't clobber the sibling keys set by the merge above.
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt.jwk-set-uri
+    yaml: "http://localhost:8080/.well-known/jwks.json"
     filePattern: "**/application.yml"
 - org.openrewrite.yaml.MergeYaml:
     key: $.internal
