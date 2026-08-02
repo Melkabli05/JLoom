@@ -6,9 +6,7 @@ import { createReplIo } from "../src/lineSource.ts";
 import type { Interface } from "node:readline/promises";
 
 // A real Readline Interface stub. Every test passes a fully-specified argv so no prompt
-// reads ever need to return anything - the line queue is effectively never consumed. We
-// silence the readline event-emitters with a no-op `on()` so the program tree can attach
-// without throwing.
+// reads ever need to return anything - the line queue is effectively never consumed.
 const rlStub: Interface = Object.assign(Object.create(null), {
   on: () => rlStub,
   setPrompt: () => undefined,
@@ -22,6 +20,24 @@ const rlStub: Interface = Object.assign(Object.create(null), {
 }) as unknown as Interface;
 const io = createReplIo(rlStub);
 
+async function captureError(argv: string[]): Promise<CommanderError> {
+  const program = buildProgram(io);
+  const origLog = console.log;
+  const origErr = console.error;
+  console.log = () => undefined;
+  console.error = () => undefined;
+  try {
+    await program.parseAsync(argv, { from: "user" });
+    throw new Error(`expected ${JSON.stringify(argv)} to throw a CommanderError`);
+  } catch (err) {
+    if (!(err instanceof CommanderError)) throw err;
+    return err;
+  } finally {
+    console.log = origLog;
+    console.error = origErr;
+  }
+}
+
 test("all 7 commands register on the program", () => {
   const program = buildProgram(io);
   const names = program.commands.map((c) => c.name());
@@ -31,64 +47,41 @@ test("all 7 commands register on the program", () => {
   );
 });
 
-test("--version: exitOverride suppresses process.exit, error code may be 'commander.help' due to showHelpAfterError", async () => {
-  const program = buildProgram(io);
-  const orig = console.log;
-  console.log = () => {};
-  let captured: CommanderError | undefined;
-  try {
-    await program.parseAsync(["--version"], { from: "node" });
-  } catch (err) {
-    captured = err as CommanderError;
-  } finally {
-    console.log = orig;
-  }
-  // exitOverride() makes Commander throw rather than process.exit - we just confirm the
-  // error makes it back to us as a CommanderError. The exact code can be 'commander.help'
-  // (when showHelpAfterError() converts it) or 'commander.version' depending on the order
-  // Commander processes the help-after-error hook. Both are fine.
-  assert.ok(captured instanceof CommanderError);
+test("--help exits cleanly with code 'commander.helpDisplayed' and exitCode 0", async () => {
+  const err = await captureError(["--help"]);
+  assert.strictEqual(err.code, "commander.helpDisplayed");
+  assert.strictEqual(err.exitCode, 0);
 });
 
-test("--help throws CommanderError with code 'commander.help'", async () => {
-  const program = buildProgram(io);
-  const orig = console.log;
-  console.log = () => {};
-  let captured: CommanderError | undefined;
-  try {
-    await program.parseAsync(["--help"], { from: "node" });
-  } catch (err) {
-    captured = err as CommanderError;
-  } finally {
-    console.log = orig;
-  }
-  assert.ok(captured instanceof CommanderError);
-  assert.strictEqual(captured.code, "commander.help");
+test("bare 'help' subcommand exits cleanly with code 'commander.help' and exitCode 0", async () => {
+  const err = await captureError(["help"]);
+  assert.strictEqual(err.code, "commander.help");
+  assert.strictEqual(err.exitCode, 0);
 });
 
-test("unknown command throws CommanderError (Commander rethrows parse failures via exitOverride)", async () => {
-  const program = buildProgram(io);
-  const orig = console.error;
-  console.error = () => {};
-  let captured: CommanderError | undefined;
-  try {
-    await program.parseAsync(["bogus"], { from: "node" });
-  } catch (err) {
-    captured = err as CommanderError;
-  } finally {
-    console.error = orig;
-  }
-  // showHelpAfterError() converts the unknown-command error into a help-display error so the
-  // caller knows parse failed and the help text was printed. We just need to confirm exitOverride
-  // is actually swallowing the error rather than the process exiting.
-  assert.ok(captured instanceof CommanderError);
+test("--version exits cleanly with code 'commander.version' and exitCode 0", async () => {
+  const err = await captureError(["--version"]);
+  assert.strictEqual(err.code, "commander.version");
+  assert.strictEqual(err.exitCode, 0);
+});
+
+test("unknown command exits with code 'commander.unknownCommand' and exitCode 1", async () => {
+  const err = await captureError(["bogus"]);
+  assert.strictEqual(err.code, "commander.unknownCommand");
+  assert.strictEqual(err.exitCode, 1);
+  assert.ok(err.message.includes("unknown command"));
+});
+
+test("invalid --database choice exits with code 'commander.invalidArgument' and a message naming the allowed choices", async () => {
+  const err = await captureError(["new", "--database", "bogus"]);
+  assert.strictEqual(err.code, "commander.invalidArgument");
+  assert.strictEqual(err.exitCode, 1);
+  assert.ok(err.message.includes("Allowed choices are"));
 });
 
 test("REPL-style invocation: `from: 'user'` argv with the program-name prefix omitted parses correctly", async () => {
   const program = buildProgram(io);
-  // 'list' as a user would type it - this is the form the REPL uses.
   await assert.doesNotReject(async () => {
     await program.parseAsync(["list"], { from: "user" });
   });
 });
-

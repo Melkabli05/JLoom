@@ -47,6 +47,9 @@ function asMenuChoice(token: string): number | undefined {
 // Force eager catalog load at REPL startup so any load-time error surfaces immediately.
 void catalog;
 
+// Same "already printed, just continue" set as cli.ts.
+const CLEAN_EXIT_CODES = new Set(["commander.helpDisplayed", "commander.help", "commander.version"]);
+
 export async function runRepl(io: ReplIo): Promise<void> {
   io.rl.on("SIGINT", () => {
     io.rl.write("\n");
@@ -80,9 +83,7 @@ export async function runRepl(io: ReplIo): Promise<void> {
     try {
       await program.parseAsync(tokens, { from: "user" });
     } catch (err) {
-      if (err instanceof CommanderError && (err.code === "commander.help" || err.code === "commander.version")) {
-        continue;
-      }
+      if (err instanceof CommanderError && CLEAN_EXIT_CODES.has(err.code)) continue;
       console.error(output.err(err instanceof Error ? err.message : String(err)));
     }
   }
