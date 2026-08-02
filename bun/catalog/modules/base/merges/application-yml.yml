@@ -13,10 +13,12 @@
     yaml: |
       probability: 1.0
     filePattern: "**/application.yml"
-# MDC traceId/spanId correlation on every log line — Spring Boot's built-in pattern variable,
-# no extra dependency, and the single most useful production-readiness line item: any log
-# aggregator (Loki / Cloud Logging / ELK) can now join logs to traces by traceId without
-# operators having to wire up a separate correlation library.
+# MDC traceId/spanId/userId correlation on every log line — Spring Boot's built-in pattern
+# variable, no extra dependency. The single most useful production-readiness line item: any
+# log aggregator (Loki / Cloud Logging / ELK) can now join logs to traces by traceId and to
+# users by userId without operators having to wire up a separate correlation library. userId is
+# populated by the aop module's MdcUserIdEnrichmentAspect when jwt-auth (or any Spring
+# Security setup) is present; the :- default keeps the segment empty when no principal.
 #
 # Note: the bare value starts with `%5p`, which js-yaml's strict parser rejects as a YAML
 # directive-end marker. merge.ts's parseFragmentYaml helper detects this and rewraps the
@@ -24,5 +26,5 @@
 # text would need a `level: "..."` wrapper here, but jloom's parser makes that unnecessary.)
 - org.openrewrite.yaml.MergeYaml:
     key: $.logging.pattern.level
-    yaml: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+    yaml: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-},%X{userId:-}]"
     filePattern: "**/application.yml"

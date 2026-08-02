@@ -1,11 +1,18 @@
 # aop — Spring AOP via spring-boot-starter-aspectj (renamed from spring-boot-starter-aop in
 # Spring Boot 4.0 — verified against the actual published Maven Central metadata, since
 # spring-boot-starter-aop's last release is only a 4.0.0 milestone), wired into Spring Boot 4's
-# built-in Micrometer Observation infrastructure: an ObservedAspect bean plus an abstract
-# ObservedService base class. Every domain ServiceImpl that extends ObservedService gets
-# per-method Timer metrics + per-method tracing spans (auto-correlated with HTTP server spans
-# via the otel-tracing bridge), with automatic exception tagging — no hand-rolled aspect, no
-# per-method annotations, and the same single Timer/Span per method Spring's own docs recommend.
+# built-in Micrometer Observation infrastructure: an ObservedAspect bean (ordered at
+# LOWEST_PRECEDENCE per Spring AOP best practices) plus an abstract ObservedService base class.
+# Every domain ServiceImpl that extends ObservedService gets per-method Timer metrics + per-method
+# tracing spans (auto-correlated with HTTP server spans via the otel-tracing bridge), with
+# automatic exception tagging — no hand-rolled aspect, no per-method annotations, and the same
+# single Timer/Span per method Spring's own docs recommend.
+#
+# Also includes MdcUserIdEnrichmentAspect, ordered at HIGHEST_PRECEDENCE: an @Around on
+# @RestController that pushes the authenticated principal's name into SLF4J MDC as 'userId' for
+# the duration of every authenticated request. Combined with base's
+# `logging.pattern.level: '%5p [...,%X{userId:-}]'`, every log line on a request now carries
+# the userId alongside the traceId/spanId — no manual MDC plumbing in controllers.
 id: aop
 version: 2.0.0
 requires: []
@@ -17,4 +24,5 @@ mergeRecipes:
 fileTemplates:
   - src/main/java/{{package_path}}/infrastructure/observation/ObservedAspectConfig.java
   - src/main/java/{{package_path}}/infrastructure/observation/ObservedService.java
+  - src/main/java/{{package_path}}/infrastructure/observation/MdcUserIdEnrichmentAspect.java
 upgrades: []

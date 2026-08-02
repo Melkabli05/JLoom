@@ -2,3 +2,12 @@
     groupId: org.springframework.boot
     artifactId: spring-boot-starter-aspectj
     configuration: implementation
+# MdcUserIdEnrichmentAspect (in this module) reads principal name from
+# SecurityContextHolder, so Spring Security must be on the classpath whenever aop is applied.
+# OpenRewrite dedup makes this a no-op when jwt-auth (which already pulls this in) is also
+# applied; applying aop alone still gives you the MDC enrichment on whatever auth model
+# Spring Security is using — or no-op for anonymous requests, gracefully.
+- org.openrewrite.gradle.AddDependency:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-security
+    configuration: implementation
