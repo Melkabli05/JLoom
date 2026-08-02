@@ -13,7 +13,7 @@
     "start": "bun run src/cli.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "compile": "bun build src/cli.ts --compile --outfile dist/jloom && cp -R catalog dist/catalog"
+    "compile": "bun build src/cli.ts --compile --outfile dist/jloom && rm -rf dist/catalog && cp -R catalog dist/catalog"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
