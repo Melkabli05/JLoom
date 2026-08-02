@@ -242,5 +242,5 @@ async function resolveDatabase(database: string | undefined): Promise<string | u
 }
 async function resolveCapabilityIds(capabilities: string[] | undefined): Promise<string[]> {
   if (capabilities !== undefined) return capabilities;
-  return askMultiple("Capabilities", capabilityChoices());
+  return askMultiple("Capabilities (space to toggle, a to select all)", capabilityChoices());
 }

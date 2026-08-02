@@ -28,7 +28,7 @@ export async function runAdd(opts: AddOpts): Promise<void> {
         label: m.id,
         hint: m.provides !== undefined ? `provides=${m.provides}` : m.requires.length > 0 ? `requires=${m.requires.join(", ")}` : undefined,
       }));
-    ids = await askMultiple("Which modules? (space to toggle, enter to confirm)", choices);
+    ids = await askMultiple("Which modules? (space to toggle, a to select all, enter to confirm)", choices);
     if (ids.length === 0) {
       console.log(output.hint("No modules selected — nothing to do."));
       return;
