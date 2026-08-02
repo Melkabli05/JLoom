@@ -33,9 +33,6 @@ export function withBasePackage(state: ProjectState, basePackage: string | undef
 export function withProjectName(state: ProjectState, projectName: string | undefined): ProjectState {
   return { ...state, projectName };
 }
-
-
-
 export function loadState(projectRoot: string): ProjectState {
   const file = statePath(projectRoot);
   if (!existsSync(file)) return emptyState();

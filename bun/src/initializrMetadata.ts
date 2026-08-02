@@ -23,19 +23,6 @@ export async function fetchInitializrMetadata(fetchImpl: FetchLike): Promise<Ini
   const bootVersionIds = new Set(data.bootVersion.values.map((v) => v.id));
   return { bootVersionIds, dependencyRanges };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 const WILDCARD = -1;
 interface ParsedVersion {
   major: number;
@@ -46,8 +33,6 @@ interface ParsedVersion {
 }
 const QUALIFIER_TIERS: Record<string, number> = { M: 0, RC: 1, SNAPSHOT: 2 };
 function parseVersion(raw: string): ParsedVersion {
-
-
   const match = raw.trim().match(/^(\d+)\.(\d+)\.(x|\d+)(?:[-.]([A-Za-z]+)(\d*))?$/);
   if (match === null) {
     throw new Error(`Cannot parse version: '${raw}'`);
@@ -73,9 +58,6 @@ function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
   if (a.major !== b.major) return a.major - b.major;
   if (a.minor !== b.minor) return a.minor - b.minor;
   if (a.patch === WILDCARD || b.patch === WILDCARD) {
-
-
-
     return 0;
   }
   if (a.patch !== b.patch) return a.patch - b.patch;
@@ -103,8 +85,6 @@ function parseRange(range: string): { lower?: Bound; upper?: Bound } {
   }
   return { lower: { version: parseVersion(trimmed), inclusive: true } };
 }
-
-
 export function isVersionCompatible(pinnedVersion: string, range: string | undefined): boolean {
   if (range === undefined || range.trim() === "") return true;
   const target = parseVersion(pinnedVersion);

@@ -232,15 +232,6 @@ function mergeYamlContent(targetContent: string, op: { key: string, yaml: string
   const merged = mergeAtPath(targetDoc, pathSegments(op.key), fragmentDoc);
   return yaml.dump(merged, { lineWidth: -1 });
 }
-
-
-
-
-
-
-
-
-
 function parseFragmentYaml(text: string, opKey: string): unknown {
   const tryLoad = (t: string) => yaml.load(t);
   let parsed: unknown;
@@ -255,8 +246,6 @@ function parseFragmentYaml(text: string, opKey: string): unknown {
       throw new Error(`Failed to parse YAML fragment for recipe key '${opKey}'`);
     }
   }
-
-
   const leaf = opKey.split(".").pop() ?? "value";
   if (
     typeof parsed === "object" &&

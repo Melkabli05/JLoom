@@ -4,9 +4,6 @@ import { buildProgram } from "./program.ts";
 import { output } from "./wizard.ts";
 const CLEAN_EXIT_CODES = new Set(["commander.helpDisplayed", "commander.help", "commander.version"]);
 async function main(): Promise<void> {
-
-
-
   const argv = process.argv.length <= 2 ? [...process.argv, "new"] : process.argv;
   try {
     await buildProgram().parseAsync(argv);

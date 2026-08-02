@@ -2,10 +2,6 @@ import yaml from "js-yaml";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 const ROOTS = ["modules", "services"];
-
-
-
-
 function findCatalogRoot(): string {
   const isCompiled = process.execPath && !process.execPath.endsWith("bun") && !process.execPath.endsWith("/bun");
   if (isCompiled) {

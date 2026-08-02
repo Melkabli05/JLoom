@@ -1,19 +1,9 @@
 import { Command, InvalidArgumentError, Option } from "commander";
-import {
-  CACHE_PROVIDER_IDS,
-  CAPABILITY_IDS,
-  DATABASE_IDS,
-  listArchetypes,
-  listCapabilities,
-  listModules,
-  listServices,
-  runAdd,
-  runConfig,
-  runInfo,
-  runNew,
-  runStatus,
-  upgrade,
-} from "./apply.ts";
+import { CACHE_PROVIDER_IDS, CAPABILITY_IDS, DATABASE_IDS } from "./capabilities.ts";
+import { listArchetypes, listCapabilities, listModules, listServices, runConfig, runInfo, runStatus } from "./commands/list.ts";
+import { runAdd } from "./commands/add.ts";
+import { runNew } from "./commands/new.ts";
+import { upgrade } from "./commands/upgrade.ts";
 function parseSetFlag(value: string, previous: Record<string, string>): Record<string, string> {
   const result = { ...previous };
   for (const pair of value.split(",")) {
@@ -31,10 +21,6 @@ function parseCapabilities(value: string): string[] {
   }
   return ids;
 }
-
-
-
-
 export function buildProgram(): Command {
   const program = new Command();
   program
@@ -57,9 +43,6 @@ export function buildProgram(): Command {
     .option("-q, --quiet", "Suppress non-essential output.", false)
     .option("-y, --yes", "Skip the final confirmation prompt.", false)
     .action(async (opts, command) => {
-
-
-
       const basePackageWasExplicit = command.getOptionValueSource("basePackage") === "cli";
       await runNew({
         name: opts.name,

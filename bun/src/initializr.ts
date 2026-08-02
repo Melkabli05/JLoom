@@ -4,8 +4,6 @@ import { fetchInitializrMetadata, isVersionCompatible } from "./initializrMetada
 const BOOT_VERSION = "4.1.0";
 const JAVA_VERSION = "25";
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
-
-
 export const INITIALIZR_DEPENDENCY_MAP: Record<string, string[]> = {
   postgres: ["data-jpa", "postgresql"],
   mysql: ["data-jpa", "mysql"],
@@ -83,9 +81,6 @@ export async function generateSpringBootProject(
   const buf = await res.arrayBuffer();
   const archive = new Bun.Archive(buf);
   await archive.extract(targetDir);
-
-
-
   const helpFile = path.join(targetDir, "HELP.md");
   if (existsSync(helpFile)) rmSync(helpFile);
   const yamlFile = path.join(targetDir, "src/main/resources/application.yaml");

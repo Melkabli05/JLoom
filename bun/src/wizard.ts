@@ -14,8 +14,6 @@ export const output = { question, accent, hint, ok, err, isColorOn: colorOn };
 function hasText(value: string | undefined): value is string {
   return value !== undefined && value.trim() !== "";
 }
-
-
 function assertNotCancelled<T>(value: T | symbol): T {
   if (clack.isCancel(value)) {
     clack.cancel("Operation cancelled.");
@@ -42,8 +40,6 @@ export async function askText(
     message,
     placeholder: defaultValue,
     defaultValue,
-
-
     validate: validate === undefined ? undefined : (v) => (hasText(v) ? validate(v) : undefined),
   });
   return assertNotCancelled(value);
