@@ -70,13 +70,27 @@ class IdentityController {
     MeResponse me(@AuthenticationPrincipal Jwt jwt) {
         return new MeResponse(jwt.getSubject());
     }
+    // Records auto-generate a toString() that prints every component — including password. This
+    // one is passed as a @RequestBody, which aop's LoggingAspect logs at DEBUG on every
+    // @RestController method call (args=...); without this override, that would put the plaintext
+    // password straight into the application log (confirmed live before this fix).
     public record TokenRequest(String username, String password) {
+        @Override
+        public String toString() {
+            return "TokenRequest[username=" + username + ", password=REDACTED]";
+        }
     }
     public record TokenResponse(String token) {
     }
     public record MeResponse(String subject) {
     }
+    // Same reasoning as TokenRequest above: never let a password-bearing type fall back to the
+    // default record toString().
     private record VerifyCredentialsRequestBody(String email, String password) {
+        @Override
+        public String toString() {
+            return "VerifyCredentialsRequestBody[email=" + email + ", password=REDACTED]";
+        }
     }
     private record VerifiedPrincipal(UUID id, String role) {
     }

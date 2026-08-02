@@ -13,11 +13,16 @@ public class JwtIssuer {
     private final String issuer;
     private final long ttlSeconds;
     private final Clock clock;
-    public JwtIssuer(JwtEncoder encoder, String issuer, long ttlSeconds, Clock clock) {
+    // Blank = no aud claim embedded, matching jwt-auth's own audience validation being opt-in
+    // (blank jwt.audience there too) — the pair only does anything once both sides configure the
+    // same non-blank value. See jwt-auth's SecurityConfig for the validation side.
+    private final String audience;
+    public JwtIssuer(JwtEncoder encoder, String issuer, long ttlSeconds, Clock clock, String audience) {
         this.encoder = encoder;
         this.issuer = issuer;
         this.ttlSeconds = ttlSeconds;
         this.clock = clock;
+        this.audience = audience;
     }
     public String issue(String subject) {
         return issue(subject, List.of());
@@ -31,6 +36,9 @@ public class JwtIssuer {
                 .expiresAt(now.plusSeconds(ttlSeconds));
         if (!roles.isEmpty()) {
             claims.claim("roles", roles);
+        }
+        if (!audience.isBlank()) {
+            claims.audience(List.of(audience));
         }
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).build();
         return encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue();

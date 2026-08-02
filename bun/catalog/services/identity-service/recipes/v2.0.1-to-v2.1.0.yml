@@ -1,0 +1,13 @@
+# identity-service 2.0.1 -> 2.1.0: adds the new jwt.audience key (blank, matching the fresh-
+# project default). This recipe only covers application.yml — the Java-side changes (password
+# redaction in TokenRequest/VerifyCredentialsRequestBody toString(), JwtIssuer's optional aud
+# claim, IdentityConfig's ephemeral-key warning) can't be expressed as an automated upgrade: the
+# merge/upgrade recipe system's CreateTextFile only substitutes a module's own prompt answers, not
+# project-level tokens like {{package}}, so it can't emit a regenerated, correctly-packaged Java
+# file. Anyone upgrading from 2.0.1 should manually apply the Java changes too (see the current
+# source, especially TokenRequest's toString() — that one's a real log-leak fix, not just hardening).
+- org.openrewrite.yaml.MergeYaml:
+    key: $.jwt
+    yaml: |
+      audience: ""
+    filePattern: "**/application.yml"

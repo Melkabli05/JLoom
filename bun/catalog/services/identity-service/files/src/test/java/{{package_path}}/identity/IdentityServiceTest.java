@@ -39,7 +39,7 @@ class IdentityServiceTest {
     @Test
     void issueThenDecodeRoundTrips() throws Exception {
         KeyPair keyPair = generateKeyPair();
-        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC());
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC(), "");
         String token = issuer.issue("alice");
         Jwt decoded = decoderFor(keyPair).decode(token);
         assertEquals("alice", decoded.getSubject());
@@ -49,14 +49,14 @@ class IdentityServiceTest {
     void decodeRejectsTokenSignedByADifferentKey() throws Exception {
         KeyPair signingKeyPair = generateKeyPair();
         KeyPair otherKeyPair = generateKeyPair();
-        JwtIssuer issuer = new JwtIssuer(encoderFor(signingKeyPair), "test-issuer", 3600, Clock.systemUTC());
+        JwtIssuer issuer = new JwtIssuer(encoderFor(signingKeyPair), "test-issuer", 3600, Clock.systemUTC(), "");
         String token = issuer.issue("alice");
         assertThrows(JwtException.class, () -> decoderFor(otherKeyPair).decode(token));
     }
     @Test
     void issueWithRolesEmbedsARolesClaim() throws Exception {
         KeyPair keyPair = generateKeyPair();
-        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC());
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC(), "");
         String token = issuer.issue("11111111-1111-1111-1111-111111111111", List.of("ADMIN"));
         Jwt decoded = decoderFor(keyPair).decode(token);
         assertEquals(List.of("ADMIN"), decoded.getClaimAsStringList("roles"));
@@ -64,9 +64,25 @@ class IdentityServiceTest {
     @Test
     void issueWithoutRolesOmitsTheRolesClaim() throws Exception {
         KeyPair keyPair = generateKeyPair();
-        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC());
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC(), "");
         String token = issuer.issue("alice");
         Jwt decoded = decoderFor(keyPair).decode(token);
         assertNull(decoded.getClaimAsStringList("roles"));
+    }
+    @Test
+    void issueWithConfiguredAudienceEmbedsAnAudClaim() throws Exception {
+        KeyPair keyPair = generateKeyPair();
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC(), "my-resource-server");
+        String token = issuer.issue("alice");
+        Jwt decoded = decoderFor(keyPair).decode(token);
+        assertEquals(List.of("my-resource-server"), decoded.getAudience());
+    }
+    @Test
+    void issueWithoutConfiguredAudienceOmitsTheAudClaim() throws Exception {
+        KeyPair keyPair = generateKeyPair();
+        JwtIssuer issuer = new JwtIssuer(encoderFor(keyPair), "test-issuer", 3600, Clock.systemUTC(), "");
+        String token = issuer.issue("alice");
+        Jwt decoded = decoderFor(keyPair).decode(token);
+        assertNull(decoded.getAudience());
     }
 }
