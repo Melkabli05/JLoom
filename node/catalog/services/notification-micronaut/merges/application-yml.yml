@@ -1,7 +1,0 @@
-- org.openrewrite.yaml.MergeYaml:
-    key: $
-    yaml: |
-      notification:
-        v1:
-          enabled: true
-    filePattern: "**/application.yml"

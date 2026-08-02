@@ -1,12 +1,8 @@
 import path from "node:path";
 import type { ReplIo } from "../lineSource.ts";
-import { byId as frameworkById } from "../framework.ts";
-import type { FrameworkSupport } from "../framework.ts";
 import * as output from "../output.ts";
 import { apply } from "../orchestrate/moduleApplier.ts";
 import * as prompts from "../prompts.ts";
-import { modulesFor } from "../registry/types.ts";
-import type { ServiceManifest } from "../registry/types.ts";
 import { isEmpty, requireEmpty } from "../util/projectPaths.ts";
 import type { JloomContext } from "../context.ts";
 
@@ -17,7 +13,6 @@ const BASE_PACKAGE_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*
 export interface NewOptions {
   name?: string;
   service?: string;
-  framework?: string;
   basePackage: string;
   archetype?: string;
   database?: string;
@@ -53,7 +48,7 @@ export async function runNew(ctx: JloomContext, io: ReplIo, options: NewOptions)
   let moduleIds =
     serviceId === undefined
       ? await buildCapabilityWizard(io, options.database, options.capabilities, options.cacheProvider)
-      : await modulesForService(io, ctx, serviceId, options.framework);
+      : ctx.services.require(serviceId).modules;
 
   let archetypeAnswers: Record<string, string> = {};
   if (options.archetype !== undefined) {
@@ -141,45 +136,6 @@ function suggestProjectName(): string {
     }
   }
   return DEFAULT_PROJECT_NAME;
-}
-
-async function modulesForService(
-  io: ReplIo,
-  ctx: JloomContext,
-  serviceId: string,
-  framework: string | undefined,
-): Promise<string[]> {
-  const svc = ctx.services.require(serviceId);
-  const chosenFramework = await resolveFramework(io, svc, framework);
-  if (!svc.framework.includes(chosenFramework)) {
-    throw new Error(
-      `Service '${serviceId}' does not support framework '${chosenFramework}'. Supported: [${svc.framework.join(", ")}]`,
-    );
-  }
-  const fw = frameworkById(chosenFramework);
-  return expandForFramework(modulesFor(svc, chosenFramework), fw);
-}
-
-async function resolveFramework(io: ReplIo, svc: ServiceManifest, framework: string | undefined): Promise<string> {
-  const preferred = svc.framework.includes("spring-boot") ? "spring-boot" : svc.framework[0]!;
-  if (hasText(framework)) {
-    return framework;
-  }
-  if (svc.framework.length === 1) {
-    return preferred;
-  }
-  if (prompts.isInteractive()) {
-    const choices = new Map(svc.framework.map((f) => [f, f]));
-    return prompts.requireChoice(io, undefined, "framework", "Framework", choices, preferred);
-  }
-  return preferred;
-}
-
-function expandForFramework(base: string[], fw: FrameworkSupport): string[] {
-  if (fw.smokeModule === "base") {
-    return base;
-  }
-  return base.map((m) => (m === "base" ? fw.smokeModule : m));
 }
 
 async function buildCapabilityWizard(

@@ -10,22 +10,6 @@ function stringList(raw: unknown): string[] {
   return Array.isArray(raw) ? raw.map(String) : [];
 }
 
-function parseModules(raw: unknown): Record<string, string[]> {
-  if (Array.isArray(raw)) {
-    return { __default__: raw.map(String) };
-  }
-  if (raw !== null && typeof raw === "object") {
-    const result: Record<string, string[]> = {};
-    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-      if (Array.isArray(value)) {
-        result[key] = value.map(String);
-      }
-    }
-    return result;
-  }
-  return {};
-}
-
 export class ServiceRegistry {
   private readonly servicesById: Map<string, ServiceManifest>;
 
@@ -45,9 +29,8 @@ export class ServiceRegistry {
           const id = String(m.id);
           const displayName = String(m.displayName);
           const description = m.description === undefined || m.description === null ? "" : String(m.description);
-          const framework = stringList(m.framework);
-          const modulesPerFramework = parseModules(m.modules);
-          result.set(id, { id, displayName, description, framework, modulesPerFramework });
+          const modules = stringList(m.modules);
+          result.set(id, { id, displayName, description, modules });
         }
       }
     }

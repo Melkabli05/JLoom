@@ -64,7 +64,6 @@ export function buildProgram(ctx: JloomContext, io: ReplIo): Command {
     .exitOverride()
     .option("--name <name>", "Project name / target directory.")
     .option("--service <id>", "Service-type id, e.g. 'notification-service' (omit for a bare base project).")
-    .option("--framework <framework>", "Framework (spring-boot | micronaut) — only used if the service supports more than one.")
     .option("--base-package <package>", "Base Java package.", "com.example.app")
     .option("--archetype <id>", "Apply an archetype's modules on top.")
     .option("--database <db>", "Database for a bare project: postgres | mysql | mariadb | h2 | none.")

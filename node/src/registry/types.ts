@@ -27,13 +27,7 @@ export interface ServiceManifest {
   id: string;
   displayName: string;
   description: string;
-  framework: string[];
-  modulesPerFramework: Record<string, string[]>;
-}
-
-/** Mirrors ServiceManifest.modulesFor(frameworkId) — falls back to the "__default__" bucket. */
-export function modulesFor(manifest: ServiceManifest, frameworkId: string): string[] {
-  return manifest.modulesPerFramework[frameworkId] ?? manifest.modulesPerFramework.__default__ ?? [];
+  modules: string[];
 }
 
 export interface ArchetypeManifest {

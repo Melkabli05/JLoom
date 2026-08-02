@@ -23,7 +23,7 @@ function formatModuleLine(m: ModuleManifest, idWidth: number, versionWidth: numb
 
 function formatServiceLine(s: ServiceManifest, idWidth: number, nameWidth: number): string {
   const paddedId = output.accent(pad(s.id, idWidth));
-  return `  ${paddedId}  ${pad(s.displayName, nameWidth)}  frameworks=${javaList(s.framework)}`;
+  return `  ${paddedId}  ${pad(s.displayName, nameWidth)}  modules=${javaList(s.modules)}`;
 }
 
 function formatArchetypeLine(a: ArchetypeManifest, idWidth: number): string {
