@@ -29,10 +29,10 @@ class ProblemDetailAuthenticationEntryPoint implements AuthenticationEntryPoint 
         objectMapper.writeValue(response.getOutputStream(), problem);
     }
     private static String detailFor(AuthenticationException authException) {
-        if (authException instanceof OAuth2AuthenticationException oauth2Exception
-                && oauth2Exception.getError().getDescription() != null) {
-            return oauth2Exception.getError().getDescription();
-        }
-        return "Full authentication is required to access this resource.";
+        return switch (authException) {
+            case OAuth2AuthenticationException oauth2Exception when oauth2Exception.getError().getDescription() != null ->
+                oauth2Exception.getError().getDescription();
+            default -> "Full authentication is required to access this resource.";
+        };
     }
 }

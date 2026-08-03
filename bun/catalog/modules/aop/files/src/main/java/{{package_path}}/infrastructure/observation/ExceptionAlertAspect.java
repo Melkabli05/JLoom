@@ -70,13 +70,15 @@ class ExceptionAlertAspect {
         return false;
     }
     private static int statusFromException(Throwable ex) {
-        if (ex instanceof ResponseStatusException rse) {
-            HttpStatus status = HttpStatus.resolve(rse.getStatusCode().value());
-            return status != null ? status.value() : 500;
-        }
-        if (ex instanceof org.springframework.web.bind.MethodArgumentNotValidException) return 400;
-        if (ex instanceof org.springframework.http.converter.HttpMessageNotReadableException) return 400;
-        if (ex instanceof org.springframework.web.method.annotation.MethodArgumentTypeMismatchException) return 400;
-        return 500;
+        return switch (ex) {
+            case ResponseStatusException rse -> {
+                HttpStatus status = HttpStatus.resolve(rse.getStatusCode().value());
+                yield status != null ? status.value() : 500;
+            }
+            case org.springframework.web.bind.MethodArgumentNotValidException _ -> 400;
+            case org.springframework.http.converter.HttpMessageNotReadableException _ -> 400;
+            case org.springframework.web.method.annotation.MethodArgumentTypeMismatchException _ -> 400;
+            default -> 500;
+        };
     }
 }
