@@ -1,5 +1,3 @@
-# Single-module archetype: postgres only, no cross-module composition.
-# See postgres-flyway-service for an archetype that composes multiple modules.
 modules:
   - postgres
 answers:

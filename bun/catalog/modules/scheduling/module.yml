@@ -1,7 +1,3 @@
-# scheduling — @EnableScheduling. No new dependency: the annotation lives in spring-context,
-# already present transitively via spring-boot-starter-webmvc. Spring Boot autoconfigures a
-# ThreadPoolTaskScheduler with sensible defaults once scheduling is enabled — no custom bean
-# needed unless pool sizing becomes a real requirement later.
 id: scheduling
 version: 1.1.0
 requires: []

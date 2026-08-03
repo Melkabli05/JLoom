@@ -1,4 +1,3 @@
-# mysql — Spring Data JPA + Hibernate + the MySQL JDBC driver. Sibling of postgres/h2/mariadb.
 id: mysql
 version: 1.0.0
 requires: []

@@ -1,13 +1,3 @@
-# Index of business-domain service modules — the actual generated code for a named service
-# (notification-service, user-service, identity-service, file-service), as opposed to
-# /modules/modules.yml's generic, reusable capability modules (postgres, validation,
-# caching-caffeine, ...). See catalogRoots.ts.
-#
-# Not to be confused with the top-level /services.yml — that's the curated-bundle catalog
-# (ServiceManifest: "notification-service the SERVICE" = base + postgres + flyway + jwt-auth +
-# ... + notification-service the MODULE listed here). Same word, two different concepts: one
-# module id below (e.g. "notification-service") is the actual code; the top-level services.yml
-# entry of the same name is a recipe that includes it alongside supporting capability modules.
 modules:
   - notification-service
   - user-service

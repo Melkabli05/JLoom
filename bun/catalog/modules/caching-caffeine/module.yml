@@ -1,18 +1,3 @@
-# caching-caffeine — Spring's cache abstraction backed by Caffeine (in-process, no external
-# service to run). Sibling of caching-redis: same capability, same CacheConfig shape, only the
-# provider and its config differ.
-#
-# @EnableCaching deliberately lives on its own CacheConfig class, not on Application.java — the
-# official Spring Boot caching docs warn against annotating the main class, since that makes
-# caching a mandatory feature even when running a test suite that never touches it.
-#
-# caching-caffeine 1.1.0 -> 1.2.0: added `recordStats` to the Caffeine spec string — see
-# merges/application-yml.yml for the full rationale (verified against Caffeine's own CaffeineSpec
-# parser source and Spring Boot's CaffeineCacheMeterBinderProvider auto-configuration). No Java
-# changes: CacheConfig stays a bare @EnableCaching marker, since the spec-string property is
-# already the Spring Boot-recommended, zero-code path for basic Caffeine tuning — unlike
-# caching-redis, there's no JDK-serialization trap to work around here (Caffeine is in-process,
-# nothing is ever serialized), so there's no need to reach for a custom CacheManager bean.
 id: caching-caffeine
 version: 1.2.0
 requires: []

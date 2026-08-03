@@ -1,17 +1,3 @@
-# identity-with-user — typical two-service starter: identity-service as the JWT issuer +
-# user-service as the consumer, wired together for real. identity-service's POST /tokens calls
-# user-service's internal credential-verification endpoint (see IdentityController) and issues a
-# JWT whose subject is the actual user id, signed with an RSA key pair. jwt-auth (added here so
-# user-service's capability:auth requirement is actually satisfied) validates that token via its
-# published JWKS — identity-service overrides jwt-auth's generic external jwk-set-uri default to
-# self-reference its own /.well-known/jwks.json (see identity-service's own application-yml
-# merge), since both services run in this one bundled project.
-#
-# user_service_base_url is a literal http://localhost:8080, not a ${server.port} placeholder: no
-# module in the catalog ever writes a `server.port` key to application.yml (Boot's default port
-# is applied internally, never published back as a resolvable property), so ${server.port} can
-# never resolve and would fail the app at startup with a PlaceholderResolutionException —
-# confirmed live. 8080 is Spring Boot's actual default when server.port is unset.
 modules:
   - postgres
   - flyway

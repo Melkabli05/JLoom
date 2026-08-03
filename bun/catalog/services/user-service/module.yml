@@ -1,11 +1,3 @@
-# user-service 3.7.0 -> 3.7.1: RegistrationRequest/ChangePasswordRequest/DeleteUserRequest/
-# ChangeEmailRequest/VerifyCredentialsRequest now override toString() to redact password fields —
-# confirmed live (as part of the jwt-auth/identity-service hardening pass this version is paired
-# with) that aop's LoggingAspect prints @RestController method args at DEBUG, and Java records'
-# default toString() prints every component, including plaintext passwords, straight into the
-# application log. Purely a toString() change — no API/behavior change, no upgrade recipe exists
-# for it (all-Java, no YAML component, and the merge/upgrade recipe system can't regenerate a
-# correctly-{{package}}-substituted Java file anyway) — reapply manually if upgrading from 3.7.0.
 id: user-service
 version: 3.7.1
 requires: [capability:http-api, capability:relational-db, capability:auth, capability:validation]

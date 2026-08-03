@@ -1,9 +1,3 @@
-# validation — Jakarta Bean Validation via spring-boot-starter-validation. That's the whole
-# module: annotating request DTOs with @NotNull/@Size/etc. and adding @Valid to controller
-# method parameters is left to the actual business module (there's no generic DTO to annotate
-# here). The response side needs no wiring from this module at all — problem-details's
-# GlobalExceptionHandler handles MethodArgumentNotValidException unconditionally, since that
-# class ships in spring-web (always present) regardless of whether this module is applied.
 id: validation
 version: 1.0.0
 requires: []

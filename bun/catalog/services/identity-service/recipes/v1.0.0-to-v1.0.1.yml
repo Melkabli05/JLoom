@@ -1,9 +1,3 @@
-# identity-service 1.0.0 -> 1.0.1: the module's own merge recipe wrote config under
-# `identity.issuer` / `identity.token-ttl-seconds`, but IdentityConfig.java has always read
-# `jwt.issuer` / `jwt.token-ttl-seconds` — a real bug that was silently masked because the
-# @Value defaults happened to equal what would have been written. Any project that customized
-# --set identity-service.jwt_issuer=... had that customization silently ignored at runtime.
-# This renames the keys already on disk to the ones the code actually reads.
 - org.openrewrite.yaml.ChangePropertyKey:
     oldPropertyKey: identity.issuer
     newPropertyKey: jwt.issuer

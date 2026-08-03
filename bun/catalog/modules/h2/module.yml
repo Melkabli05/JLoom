@@ -1,6 +1,3 @@
-# h2 — Spring Data JPA + Hibernate + an in-memory H2 database. Sibling of postgres/mysql/mariadb:
-# same capability, same db_name prompt, same JPA bundling — only the driver and datasource
-# differ. Intended for local development and fast test runs, not production use.
 id: h2
 version: 1.0.0
 requires: []

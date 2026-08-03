@@ -1,4 +1,3 @@
-# mariadb — Spring Data JPA + Hibernate + the MariaDB JDBC driver. Sibling of postgres/h2/mysql.
 id: mariadb
 version: 1.0.0
 requires: []

@@ -1,16 +1,3 @@
-# jwt-auth 3.0.0 -> 3.1.0: adds the new jwt.audience / jwt.cors.allowed-origins keys (both blank,
-# matching the fresh-project defaults). This can't also remove the old, dead jwt.expiration-seconds
-# key an earlier version wrote — none of merge.ts's recipe kinds can delete a YAML key, only add/
-# overwrite one — so it's left behind on already-generated projects; it's inert (nothing ever read
-# it) so leaving it in place is harmless, just no longer written for new projects.
-#
-# This recipe only covers application.yml. The Java-side hardening (mandatory exp validation,
-# explicit RS256 pinning, the new ProblemDetailAuthenticationEntryPoint, the /actuator/**
-# permitAll fix, CORS wiring) can't be expressed as an automated upgrade either — the merge/
-# upgrade recipe system's CreateTextFile only substitutes a module's own prompt answers, not
-# project-level tokens like {{package}}, so it can't emit a regenerated, correctly-packaged
-# SecurityConfig.java. Anyone upgrading from 3.0.0 should manually apply the Java changes too
-# (see the current SecurityConfig.java / new ProblemDetailAuthenticationEntryPoint.java).
 - org.openrewrite.yaml.MergeYaml:
     key: $.jwt
     yaml: |

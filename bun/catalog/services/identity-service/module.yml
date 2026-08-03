@@ -1,32 +1,3 @@
-# identity-service 2.0.0 -> 2.0.1: fixes a real security hole. IdentityController's POST /tokens,
-# whenever user-service.base-url is blank (the DEFAULT — the prompt defaults to ""), issued a
-# fully valid, signed JWT for ANY username in the request body with NO password check at all.
-# Fixed by failing closed: a blank base-url now makes /tokens refuse to issue tokens (503)
-# instead of silently trusting the caller. No automated `jloom upgrade` recipe exists for this —
-# the merge/upgrade recipe system's CreateTextFile only substitutes a module's own prompt
-# answers, not project-level tokens like {{package}}, so an upgrade recipe can't emit a
-# regenerated, correctly-packaged IdentityController.java. Anyone on 2.0.0 must manually apply
-# this fix (see the source for the corrected /tokens method) or regenerate the service.
-#
-# identity-service 2.0.1 -> 2.1.0, paired with jwt-auth's own 3.0.0 -> 3.1.0 hardening pass:
-# - TokenRequest/VerifyCredentialsRequestBody now override toString() to redact passwords —
-#   confirmed live that aop's LoggingAspect (DEBUG-level @RestController arg logging) was printing
-#   the plaintext password from POST /tokens straight into the application log via the default
-#   record toString().
-# - JwtIssuer optionally embeds an `aud` claim (jwt.audience, blank by default, same property key
-#   jwt-auth optionally validates against) — meaningful once multiple independently-deployed
-#   resource servers share this one identity-service.
-# - IdentityConfig now logs a WARN when falling back to an ephemeral key pair, so it's impossible
-#   to silently run production on a random, restart-losing key without it showing up in the logs.
-# - Found while verifying the above live: the published JWKS's `kid` was a fresh random UUID on
-#   every single boot, REGARDLESS of whether jwt.private-key/jwt.public-key configured a
-#   persistent key — meaning even a "properly configured" persistent key pair still silently
-#   invalidated every outstanding token on every restart (NimbusJwtDecoder looks up signing keys
-#   by kid, and the old kid would no longer be in the newly-published JWKS). Confirmed live:
-#   restarted with the exact same configured PEM key pair, a still-valid token from the prior boot
-#   failed decode with "no matching key(s) found". Fixed by deriving kid deterministically via
-#   Nimbus's own RSAKey.Builder.keyIDFromThumbprint() (RFC 7638) instead of a random UUID — the
-#   same key material now always gets the same kid across restarts, verified live.
 id: identity-service
 version: 2.1.0
 requires: [capability:http-api, capability:auth]
@@ -35,17 +6,12 @@ prompts:
   - key: jwt_issuer
     type: string
     default: jloom-app
-  # Blank -> IdentityConfig generates an ephemeral RSA-2048 key pair at boot (dev-friendly,
-  # single-instance only). Real deployments must configure a persistent PEM-encoded key pair
-  # here so every instance serves the same JWKS.
   - key: jwt_private_key
     type: secret
     default: ""
   - key: jwt_public_key
     type: string
     default: ""
-  # Blank = no aud claim embedded — see jwt-auth's own jwt_audience prompt, the paired validation
-  # side under the same property key.
   - key: jwt_audience
     type: string
     default: ""

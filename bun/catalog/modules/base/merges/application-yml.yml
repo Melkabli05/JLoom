@@ -1,8 +1,3 @@
-# Production-readiness defaults every generated project ships with. The otel-tracing module
-# already merges the same `management.tracing.sampling.probability` and the same endpoint
-# exposure block into the same file; MergeYaml is idempotent at the scalar/leaf level, so
-# adding them here too is harmless and means a bare `jloom new --database none` is scrape-
-# ready out of the box.
 - org.openrewrite.yaml.MergeYaml:
     key: $.management.endpoints.web.exposure
     yaml: |
@@ -13,17 +8,6 @@
     yaml: |
       probability: 1.0
     filePattern: "**/application.yml"
-# MDC traceId/spanId/userId correlation on every log line — Spring Boot's built-in pattern
-# variable, no extra dependency. The single most useful production-readiness line item: any
-# log aggregator (Loki / Cloud Logging / ELK) can now join logs to traces by traceId and to
-# users by userId without operators having to wire up a separate correlation library. userId is
-# populated by the aop module's MdcUserIdEnrichmentAspect when jwt-auth (or any Spring
-# Security setup) is present; the :- default keeps the segment empty when no principal.
-#
-# Note: the bare value starts with `%5p`, which js-yaml's strict parser rejects as a YAML
-# directive-end marker. merge.ts's parseFragmentYaml helper detects this and rewraps the
-# content in a single-key/value document, preserving the value verbatim. (Plain YAML recipe
-# text would need a `level: "..."` wrapper here, but jloom's parser makes that unnecessary.)
 - org.openrewrite.yaml.MergeYaml:
     key: $.logging.pattern.level
     yaml: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-},%X{userId:-}]"

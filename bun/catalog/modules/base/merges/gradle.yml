@@ -1,14 +1,8 @@
-# ArchUnit isn't in Spring Initializr's dependency catalog, so it's added the same way any
-# other module adds a dependency to an already-generated build.gradle.kts.
 - org.openrewrite.gradle.AddDependency:
     groupId: com.tngtech.archunit
     artifactId: archunit-junit5
     version: 1.4.1
     configuration: testImplementation
-# Production-readiness observability bundle — every generated project is scrape-ready and
-# trace-ready on day 1, with zero opt-in. These four are the same set the otel-tracing module
-# already pulls in (intentionally, so OpenRewrite's AddDependency dedup makes adding them
-# again a no-op rather than a conflict).
 - org.openrewrite.gradle.AddDependency:
     groupId: org.springframework.boot
     artifactId: spring-boot-starter-actuator
@@ -25,12 +19,6 @@
     groupId: io.opentelemetry
     artifactId: opentelemetry-exporter-otlp
     configuration: runtimeOnly
-# Lombok + MapStruct for every generated project. Lombok compileOnly + annotationProcessor
-# (annotation-processor-only path is the canonical pattern since Lombok is bytecode-only).
-# MapStruct with lombok-mapstruct-binding so @Mapper sees Lombok-generated getters/setters
-# instead of throwing "no property named X" — the binding has to come AFTER lombok's
-# annotation processor in the classpath; OpenRewrite's AddDependency appends in declaration
-# order, so this ordering is load-bearing.
 - org.openrewrite.gradle.AddDependency:
     groupId: org.projectlombok
     artifactId: lombok
@@ -54,12 +42,6 @@
     artifactId: lombok-mapstruct-binding
     version: 0.2.0
     configuration: annotationProcessor
-# Code formatter — every generated project gets Spotless with google-java-format pre-wired.
-# AddBuildPlugin registers com.diffplug.spotless in the plugins{} block; InsertIntoFile
-# appends the spotless{} DSL block to the end of build.gradle.kts (right after the closing
-# `}` of the plugins{} block, so the spotless extension is in scope). Running
-# `./gradlew spotlessApply` rewrites every Java file in standard Google Java Format;
-# `./gradlew spotlessCheck` fails the build on any unformatted file.
 - org.openrewrite.gradle.AddBuildPlugin:
     pluginId: com.diffplug.spotless
     version: 7.0.2
@@ -70,9 +52,6 @@
       spotless {
           java {
               target("**/*.java")
-              // Pin google-java-format 1.28.0: that's the version that works against the
-              // JDK internals in JDK 25; older versions baked into Spotless throw
-              // NoSuchMethodError on com.sun.tools.javac.util.Log$DeferredDiagnosticHandler.
               googleJavaFormat("1.28.0")
               removeUnusedImports()
               trimTrailingWhitespace()

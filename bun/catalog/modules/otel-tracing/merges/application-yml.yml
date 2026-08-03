@@ -1,8 +1,3 @@
-# 2-level dotted MergeYaml keys (like `$.management.tracing`) get emitted as literal dotted keys at
-# root when the parent path doesn't already exist (same quirk we hit on jwt-auth's
-# `spring.security.user`). Merging into `$.management` with the nested snippet is the robust
-# pattern — it produces a real nested `management.tracing:` block whether or not `management:`
-# exists in the file yet.
 - org.openrewrite.yaml.MergeYaml:
     key: $.management
     yaml: |

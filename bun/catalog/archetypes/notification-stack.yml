@@ -1,6 +1,3 @@
-# notification-stack — sample "real" service stack: notification-service on top of the
-# postgres + observability + JWT + problem-details stack. The archetype is applied AFTER
-# `base` is scaffolded — it adds the modules listed below.
 modules:
   - postgres
   - flyway

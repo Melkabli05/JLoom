@@ -1,36 +1,3 @@
-# caching-redis — Spring's cache abstraction backed by Redis. Sibling of caching-caffeine: same
-# capability, same CacheConfig shape, only the provider and its config differ.
-#
-# caching-redis 1.1.0 -> 1.2.0 (researched against the current official spring-boot and
-# spring-data-redis source, since Spring Boot's docs site didn't serve the full property
-# appendix): Spring Boot's auto-configured RedisCacheManager defaults to JDK serialization
-# (JdkSerializationRedisSerializer) for cache values unless a RedisCacheConfiguration bean says
-# otherwise — confirmed directly in spring-boot-cache's RedisCacheConfiguration.java. That means
-# every cached value must implement Serializable, cached data isn't human-readable in Redis, and
-# it isn't interoperable across languages/services. CacheConfig now supplies its own
-# RedisCacheConfiguration bean using GenericJacksonJsonRedisSerializer (JSON) instead, built via
-# its dedicated builder with default typing enabled (a "@class" hint written alongside each
-# value) restricted to a PolymorphicTypeValidator that only allows subtypes of the app's own
-# base package — required because the plain ObjectMapper-arg constructor does NOT enable default
-# typing on its own (confirmed live: without it, reads deserialize to a raw LinkedHashMap and the
-# cache proxy's cast to the declared return type throws ClassCastException on the second, cached
-# call). Deliberately a separate ObjectMapper from the app's shared web-facing Jackson bean, not
-# that bean reused — enabling default/polymorphic typing globally on the app's HTTP
-# request/response mapper would be its own bad idea, so cache (de)serialization gets its own
-# purpose-built mapper instead. Also re-reads spring.cache.redis.* properties manually
-# (time-to-live, key-prefix, cache-null-values, use-key-prefix) since supplying a custom
-# RedisCacheConfiguration bean bypasses Boot's own property-driven wiring entirely — confirmed by
-# reading RedisCacheConfiguration.createConfiguration() in spring-boot-cache's source and
-# mirroring its exact logic. Note: GenericJacksonJsonRedisSerializer (not the "2" suffixed
-# GenericJackson2JsonRedisSerializer) is deliberate — the "2" class is deprecated for removal
-# since Spring Data Redis 4.0 in favor of this Jackson-3-based one, and Jackson 3
-# (tools.jackson.*) is what spring-boot-starter-jackson actually resolves by default on this
-# project's Spring Boot version (verified live via `gradle dependencies`).
-#
-# Also added explicit spring.data.redis.timeout/connect-timeout (2s each): both are unset/
-# unbounded by Spring Boot's own defaults (confirmed in DataRedisProperties source), so a network
-# partition or wedged server can otherwise hang a request indefinitely for something that's
-# supposed to be a fast-path cache.
 id: caching-redis
 version: 1.2.0
 requires: []

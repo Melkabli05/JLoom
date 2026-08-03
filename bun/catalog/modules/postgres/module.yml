@@ -1,7 +1,3 @@
-# postgres — Spring Data JPA + Hibernate + the Postgres JDBC driver, wired via OpenRewrite merge
-# recipes (both fragments below are plain OpenRewrite recipe YAML, not hand-parsed file edits).
-# Persistence technology is not a user choice in this generator (design decision: Spring Data
-# JPA only) — choosing a database module is the only prompt, and it brings JPA with it.
 id: postgres
 version: 1.2.0
 requires: []
