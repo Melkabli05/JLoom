@@ -67,7 +67,7 @@ public class LocalFilesystemStorage implements MediaStorage {
         if (Files.exists(sidecar)) {
             try {
                 return Files.readString(sidecar).trim();
-            } catch (IOException e) {
+            } catch (IOException _) {
                 return "";
             }
         }
@@ -77,7 +77,7 @@ public class LocalFilesystemStorage implements MediaStorage {
         Path sidecar = target.resolveSibling(target.getFileName() + ".sha256");
         try {
             Files.writeString(sidecar, checksum);
-        } catch (IOException e) {
+        } catch (IOException _) {
         }
     }
     @Override

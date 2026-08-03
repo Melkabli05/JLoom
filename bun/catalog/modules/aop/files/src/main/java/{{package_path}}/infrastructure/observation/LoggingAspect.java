@@ -8,15 +8,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
 import java.util.Arrays;
-
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 class LoggingAspect {
     private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
-
     @Around("@within(org.springframework.web.bind.annotation.RestController)")
     Object logAround(ProceedingJoinPoint pjp) throws Throwable {
         if (!log.isDebugEnabled()) {

@@ -13,9 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.Set;
-
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
@@ -29,10 +27,8 @@ class ExceptionAlertAspect {
                     org.springframework.web.bind.MethodArgumentNotValidException.class,
                     org.springframework.http.converter.HttpMessageNotReadableException.class,
                     org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class);
-
     private final Counter alerts;
     private final Counter suppressed;
-
     ExceptionAlertAspect(MeterRegistry registry) {
         this.alerts = Counter.builder("jloom.exception.alerts")
                 .description("Unexpected exceptions escaping jloom-managed code (genuine production errors)")
@@ -43,7 +39,6 @@ class ExceptionAlertAspect {
                 .tag("kind", "expected")
                 .register(registry);
     }
-
     @AfterThrowing(
             pointcut = "@within(org.springframework.stereotype.Service) || @within(org.springframework.web.bind.annotation.RestController)",
             throwing = "ex")
@@ -57,7 +52,6 @@ class ExceptionAlertAspect {
         int status = statusFromException(ex);
         log.error("ALERT [{}] {}: {}", status, jp.getSignature().toShortString(), ex.getMessage(), ex);
     }
-
     private static boolean isExpected(Throwable ex) {
         for (Class<? extends Throwable> klass : EXPECTED) {
             if (klass.isInstance(ex)) {
@@ -75,7 +69,6 @@ class ExceptionAlertAspect {
         }
         return false;
     }
-
     private static int statusFromException(Throwable ex) {
         if (ex instanceof ResponseStatusException rse) {
             HttpStatus status = HttpStatus.resolve(rse.getStatusCode().value());

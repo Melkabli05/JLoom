@@ -101,11 +101,11 @@ class MediaServiceImpl implements MediaService {
             asset.setStatus(MediaAssetStatus.FAILED);
             try {
                 repository.save(asset);
-            } catch (RuntimeException ignored) {
+            } catch (RuntimeException _) {
             }
             try {
                 storage.delete(key);
-            } catch (RuntimeException ignored) {
+            } catch (RuntimeException _) {
             }
             throw e;
         }
@@ -118,7 +118,7 @@ class MediaServiceImpl implements MediaService {
                     .findFirstByOwnerIdAndPurposeAndIdempotencyKeyAndStatusNot(
                             ownerId, purpose.name(), idempotencyKey, MediaAssetStatus.FAILED);
             if (existing.isPresent()) {
-                try { storage.delete(key); } catch (RuntimeException ignored) { }
+                try { storage.delete(key); } catch (RuntimeException _) { }
                 return existing.get();
             }
             throw e;
@@ -161,9 +161,9 @@ class MediaServiceImpl implements MediaService {
         int deleted = 0;
         for (MediaAsset asset : expired) {
             try {
-                try { storage.delete(asset.getStorageKey()); } catch (RuntimeException ignored) { }
+                try { storage.delete(asset.getStorageKey()); } catch (RuntimeException _) { }
                 if (asset.getThumbnailKey() != null) {
-                    try { storage.delete(asset.getThumbnailKey()); } catch (RuntimeException ignored) { }
+                    try { storage.delete(asset.getThumbnailKey()); } catch (RuntimeException _) { }
                 }
                 repository.delete(asset);
                 deleted++;

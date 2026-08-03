@@ -23,18 +23,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
-
 @Configuration
 class IdentityConfig {
-
     private static final Logger log = LoggerFactory.getLogger(IdentityConfig.class);
-
     @Bean
     @ConditionalOnMissingBean(Clock.class)
     Clock systemClock() {
         return Clock.systemUTC();
     }
-
     @Bean
     JWKSource<SecurityContext> jwkSource(@Value("${jwt.private-key:}") String privateKeyPem,
                                          @Value("${jwt.public-key:}") String publicKeyPem)
@@ -51,25 +47,14 @@ class IdentityConfig {
         }
         RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                 .privateKey((RSAPrivateKey) keyPair.getPrivate())
-                // Deterministic (RFC 7638 JWK thumbprint, derived from the key's own modulus/
-                // exponent), not a fresh UUID per boot — a random kid meant a persistently
-                // configured key pair still silently invalidated every outstanding token on every
-                // restart, since the published JWKS would only ever contain the new random kid,
-                // never the previous one a not-yet-expired token was signed with. Confirmed live:
-                // restarting with the exact same configured PEM key pair, a still-valid token
-                // from the prior boot failed decode with "no matching key(s) found" until this
-                // fix. A genuinely different (e.g. ephemeral, regenerated-per-boot) key still
-                // gets a different kid too, since the thumbprint depends on the key material.
                 .keyIDFromThumbprint()
                 .build();
         return new ImmutableJWKSet<>(new JWKSet(rsaKey));
     }
-
     @Bean
     JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
         return new NimbusJwtEncoder(jwkSource);
     }
-
     @Bean
     JwtIssuer jwtIssuer(JwtEncoder encoder,
                         @Value("${jwt.issuer:jloom-app}") String issuer,
@@ -78,7 +63,6 @@ class IdentityConfig {
                         @Value("${jwt.audience:}") String audience) {
         return new JwtIssuer(encoder, issuer, ttl, clock, audience);
     }
-
     private static KeyPair generateEphemeralKeyPair() throws NoSuchAlgorithmException {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048);
