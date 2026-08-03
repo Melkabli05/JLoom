@@ -73,9 +73,10 @@ public class ThumbnailGenerator {
                 return;
             }
             StringBuilder composite = new StringBuilder();
-            for (java.awt.Dimension size : mediaProperties.thumbnails().sizes()) {
-                int w = (int) size.getWidth();
-                int h = (int) size.getHeight();
+            for (String size : mediaProperties.thumbnails().sizes()) {
+                int separator = size.indexOf('x');
+                int w = Integer.parseInt(size.substring(0, separator));
+                int h = Integer.parseInt(size.substring(separator + 1));
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 Thumbnails.of(image)
                         .size(w, h)

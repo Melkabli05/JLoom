@@ -50,4 +50,6 @@ public class MediaAsset {
     private Instant expiresAt;
     @Column(name = "thumbnail_key", length = 1024)
     private String thumbnailKey;
+    @Column(name = "idempotency_key")
+    private String idempotencyKey;
 }

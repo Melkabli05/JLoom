@@ -35,22 +35,12 @@ class MediaConfig {
     }
     @Bean
     @ConditionalOnProperty(name = "media.storage.type", havingValue = "local", matchIfMissing = true)
-    MediaStorage mediaStorage(LocalFilesystemStorage local) {
-        return local;
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    LocalFilesystemStorage localFilesystemStorage(MediaStorageProperties properties) {
+    MediaStorage localMediaStorage(MediaStorageProperties properties) {
         return new LocalFilesystemStorage(Path.of(properties.local().baseDir()));
     }
     @Bean
     @ConditionalOnProperty(name = "media.storage.type", havingValue = "minio")
-    MediaStorage mediaStorage(MinioStorage minio) {
-        return minio;
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    MinioStorage minioStorage(MinioClient client, MediaStorageProperties properties) {
+    MediaStorage minioMediaStorage(MinioClient client, MediaStorageProperties properties) {
         return new MinioStorage(client, properties.minio().bucket());
     }
     @Bean

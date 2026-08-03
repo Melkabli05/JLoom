@@ -51,7 +51,7 @@ class ThumbnailGeneratorTest {
         byte[] realPng = makeRealPng(32, 32);
         MediaAsset asset = new MediaAsset(id, "test.png", "image/png", realPng.length, "",
                 owner, "USER_AVATAR", MediaVisibility.PRIVATE,
-                MediaAssetStatus.AVAILABLE, "test.png", now, now, null, null);
+                MediaAssetStatus.AVAILABLE, "test.png", now, now, null, null, null);
         when(repository.findById(id)).thenReturn(java.util.Optional.of(asset));
         storage.put(asset.getStorageKey(), new ByteArrayInputStream(realPng), realPng.length, "image/png");
         generator.generate(id);

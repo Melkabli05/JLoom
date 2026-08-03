@@ -1,5 +1,5 @@
 id: file-service
-version: 0.1.0
+version: 0.2.0
 requires: [base, capability:http-api, capability:relational-db, capability:validation, capability:auth, capability:async, capability:scheduling]
 conflicts: []
 prompts:
@@ -38,6 +38,7 @@ fileTemplates:
   - src/main/java/{{package_path}}/file/presentation/dto/PresignedUploadResponse.java
   - src/main/java/{{package_path}}/file/presentation/mapper/MediaMapper.java
   - src/main/java/{{package_path}}/file/presentation/support/MediaStreaming.java
+  - src/main/java/{{package_path}}/file/presentation/exception/MediaExceptionHandler.java
   - src/main/java/{{package_path}}/file/presentation/controller/MediaController.java
   - src/main/java/{{package_path}}/file/presentation/controller/InternalMediaController.java
   - src/main/resources/db/migration/V2__create_media_assets.sql

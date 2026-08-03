@@ -91,7 +91,8 @@ class MediaServiceImpl implements MediaService {
         MediaAsset asset = new MediaAsset(
                 UUID.randomUUID(), key, sniffedContentType, 0L, "",
                 ownerId, purpose.name(), visibility,
-                MediaAssetStatus.PENDING, originalFilename, now, null, null, null);
+                MediaAssetStatus.PENDING, originalFilename, now, null, null, null,
+                idempotencyKey);
         try {
             storage.putAsync(key, bounded, contentLength, sniffedContentType).join();
             asset.setStatus(MediaAssetStatus.AVAILABLE);
