@@ -1,5 +1,5 @@
 id: file-service
-version: 0.2.0
+version: 0.2.1
 requires: [base, capability:http-api, capability:relational-db, capability:validation, capability:auth, capability:async, capability:scheduling]
 conflicts: []
 prompts:

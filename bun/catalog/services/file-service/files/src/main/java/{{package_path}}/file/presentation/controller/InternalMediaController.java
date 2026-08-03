@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
@@ -50,7 +51,7 @@ class InternalMediaController {
             @RequestParam(value = "purpose", defaultValue = "INGEST") MediaPurpose purpose,
             @RequestParam(value = "visibility", defaultValue = "INTERNAL") MediaVisibility visibility) throws IOException {
         if (serviceKey.isBlank() || !serviceKey.equals(providedKey)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid or missing internal service key");
         }
         MediaAsset asset = service.upload(
                 null, purpose, visibility,
@@ -69,7 +70,7 @@ class InternalMediaController {
             @RequestParam(value = "contentType", defaultValue = "application/octet-stream") String contentType,
             @RequestParam(value = "originalFilename", required = false) String originalFilename) {
         if (serviceKey.isBlank() || !serviceKey.equals(providedKey)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid or missing internal service key");
         }
         URI url = service.presignPut(null, purpose, visibility, contentType, originalFilename);
         String path = url.getPath();
@@ -84,7 +85,7 @@ class InternalMediaController {
             @PathVariable UUID id,
             @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader) {
         if (serviceKey.isBlank() || !serviceKey.equals(providedKey)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid or missing internal service key");
         }
         MediaAsset asset = service.find(id).orElseThrow(() -> new MediaNotFoundException(id.toString()));
         MediaObject object = service.download(id);

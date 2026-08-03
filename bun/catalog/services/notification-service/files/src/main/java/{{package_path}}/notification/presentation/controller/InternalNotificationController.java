@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/internal/notifications")
 class InternalNotificationController {
@@ -28,7 +29,7 @@ class InternalNotificationController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody NotificationRequest request) {
         if (serviceKey.isBlank() || !serviceKey.equals(providedKey)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid or missing internal service key");
         }
         Notification notification = service.submit(request.recipientEmail(), request.subject(), request.body(), idempotencyKey);
         return ResponseEntity.status(HttpStatus.ACCEPTED)

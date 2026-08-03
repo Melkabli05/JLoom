@@ -1,5 +1,5 @@
 id: user-service
-version: 3.7.1
+version: 3.7.2
 requires: [capability:http-api, capability:relational-db, capability:auth, capability:validation]
 conflicts: []
 prompts:

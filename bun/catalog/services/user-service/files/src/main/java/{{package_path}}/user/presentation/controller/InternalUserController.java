@@ -7,12 +7,12 @@ import {{package}}.user.presentation.mapper.UserMapper;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/internal/users")
 class InternalUserController {
@@ -25,15 +25,14 @@ class InternalUserController {
         this.mapper = mapper;
     }
     @PostMapping("/verify-credentials")
-    ResponseEntity<VerifyCredentialsResponse> verifyCredentials(
+    VerifyCredentialsResponse verifyCredentials(
             @RequestHeader(value = "X-Internal-Service-Key", required = false) String providedKey,
             @Valid @RequestBody VerifyCredentialsRequest request) {
         if (serviceKey.isBlank() || !serviceKey.equals(providedKey)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid or missing internal service key");
         }
         return service.verifyCredentials(request.email(), request.password())
                 .map(mapper::toVerifyCredentialsResponse)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid credentials"));
     }
 }
