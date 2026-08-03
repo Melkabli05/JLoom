@@ -1,5 +1,5 @@
 id: base
-version: 3.0.0
+version: 3.1.0
 requires: []
 conflicts: []
 prompts: []
@@ -22,3 +22,7 @@ fileTemplates:
   - src/main/java/{{package_path}}/presentation/dto/package-info.java
   - src/main/java/{{package_path}}/presentation/mapper/package-info.java
   - src/main/java/{{package_path}}/presentation/exception/package-info.java
+upgrades:
+  - from: 3.0.0
+    to: 3.1.0
+    recipe: recipes/v3.0.0-to-v3.1.0.yml

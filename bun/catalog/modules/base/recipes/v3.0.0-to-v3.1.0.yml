@@ -1,0 +1,5 @@
+- org.openrewrite.yaml.MergeYaml:
+    key: $.spring.threads.virtual
+    yaml: |
+      enabled: true
+    filePattern: "**/application.yml"

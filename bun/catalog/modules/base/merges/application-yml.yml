@@ -1,4 +1,9 @@
 - org.openrewrite.yaml.MergeYaml:
+    key: $.spring.threads.virtual
+    yaml: |
+      enabled: true
+    filePattern: "**/application.yml"
+- org.openrewrite.yaml.MergeYaml:
     key: $.management.endpoints.web.exposure
     yaml: |
       include: health,info,metrics,prometheus
