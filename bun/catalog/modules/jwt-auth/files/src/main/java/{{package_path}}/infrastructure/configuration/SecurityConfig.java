@@ -87,7 +87,7 @@ public class SecurityConfig {
         decoder.setJwtValidator(buildValidator(issuer, audience));
         return decoder;
     }
-    private static OAuth2TokenValidator<Jwt> buildValidator(String issuer, String audience) {
+    static OAuth2TokenValidator<Jwt> buildValidator(String issuer, String audience) {
         JwtTimestampValidator timestampValidator = new JwtTimestampValidator();
         timestampValidator.setAllowEmptyExpiryClaim(false);
         List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>(List.of(
