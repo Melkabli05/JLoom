@@ -171,7 +171,6 @@ function findBuildFile(root: string): string {
   }
   throw new Error(`No build.gradle.kts or build.gradle found under ${root}`);
 }
-
 const PLUGINS_BLOCK = /plugins\s*\{/;
 function applyAddBuildPlugin(root: string, op: { pluginId: string; version?: string; apply?: boolean }): void {
   const buildFile = findBuildFile(root);
@@ -308,7 +307,6 @@ function applyCreateFile(root: string, op: { relativeFileName: string; fileConte
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, op.fileContents, "utf8");
 }
-
 function applyInsertIntoFile(root: string, op: { filePattern: string; afterRegex: string; line: string }): void {
   if (op.afterRegex === "") return;
   for (const file of filesMatching(root, op.filePattern)) {

@@ -145,13 +145,11 @@ export interface ApplyOpts {
 export async function apply(opts: ApplyOpts): Promise<ApplyResult> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const state = loadState(opts.targetProject);
-
   const pickProvider = opts.pickProvider ?? (async () => undefined);
   const resolution = await resolveModules(catalog, appliedIds(state), opts.moduleIds, pickProvider, opts.preResolved);
   if (resolution.problems.length > 0) return { kind: "rejected", problems: resolution.problems };
   const moduleIds = resolution.moduleIds;
   const autoAdded = resolution.added;
-
   const problems = validate(catalog, appliedIds(state), moduleIds);
   if (problems.length > 0) return { kind: "rejected", problems };
   const tokenState = seedStateForFreshApply(state, opts.basePackage, opts.projectName);

@@ -1,10 +1,5 @@
 import { catalog, capabilityProviders, type ModuleManifest } from "./catalog.ts";
 import { askChoice, isInteractive } from "./wizard.ts";
-// Every list below is derived live from the catalog's own requires/provides metadata instead of
-// a hand-maintained literal — adding a module to the catalog makes it show up here (and in the
-// wizard) with zero code changes. The trade-off: these are plain string[] rather than literal
-// tuples, so --database/--capabilities/--cache-provider validate their choices at runtime
-// (Commander's .choices() already does this) rather than via a TS literal union.
 export const DATABASE_IDS: string[] = [
   ...capabilityProviders(catalog, "capability:relational-db").map((m) => m.id),
   "none",
@@ -32,9 +27,6 @@ export function formatCapabilityLabel(value: string): string {
 export function capabilityChoices(): { value: string; label: string }[] {
   const choices: { value: string; label: string }[] = [
     { value: "validation", label: CAPABILITY_LABELS.validation! },
-    // "migrations" is synthetic: flyway/flyway-mysql provide nothing distinguishable — the
-    // choice between them is purely "which SQL dialect", resolved by resolveMigrationsModule()
-    // once the database is known (asking live if the user picks Migrations before a database).
     { value: "migrations", label: CAPABILITY_LABELS.migrations! },
   ];
   const seen = new Set(["validation"]);

@@ -170,12 +170,6 @@ interface CapabilityWizardResult {
   moduleIds: string[];
   preResolved: Map<string, string>;
 }
-// Fully catalog-driven: the Database question and the Capabilities multiselect both read their
-// choices from the catalog's own `provides` metadata (via capabilityChoices()/
-// capabilityProviders()) instead of a hardcoded switch statement — a new module in the catalog
-// shows up here with zero code changes. Picking a capability that needs a database before one's
-// chosen (Migrations, or any future capability requiring capability:relational-db) triggers a
-// live follow-up question instead of being hidden until a database is picked first.
 async function buildCapabilityWizard(
   database: string | undefined,
   capabilities: string[] | undefined,
@@ -183,15 +177,12 @@ async function buildCapabilityWizard(
 ): Promise<CapabilityWizardResult> {
   const moduleIds: string[] = ["base"];
   const preResolved = new Map<string, string>();
-
   let databaseModule = await resolveDatabase(database);
   if (databaseModule !== undefined) {
     moduleIds.push(databaseModule);
     preResolved.set("capability:relational-db", databaseModule);
   }
-
   const capabilityIds = await resolveCapabilityIds(capabilities);
-
   if (capabilityIds.includes("migrations") && databaseModule === undefined) {
     const providers = capabilityProviders(catalog, "capability:relational-db");
     databaseModule = await interactivePickProvider("capability:relational-db", providers);
@@ -200,7 +191,6 @@ async function buildCapabilityWizard(
       preResolved.set("capability:relational-db", databaseModule);
     }
   }
-
   for (const capability of capabilityIds) {
     if (capability === "migrations") {
       if (databaseModule !== undefined) moduleIds.push(resolveMigrationsModule(databaseModule));
@@ -220,14 +210,8 @@ async function buildCapabilityWizard(
       moduleIds.push(chosen);
     }
   }
-
   return { moduleIds, preResolved };
 }
-// flyway/flyway-mysql both require capability:relational-db and provide nothing
-// distinguishable — the split between them is purely "which SQL dialect", not expressible as a
-// simple capability match, so it's kept as one small, explicit special case rather than forced
-// through the generic multi-provider mechanism (which would mean asking the user twice: once
-// for the database, once for "which migration flavor for that same database" — redundant).
 function resolveMigrationsModule(databaseModuleId: string): string {
   return databaseModuleId === "mysql" || databaseModuleId === "mariadb" ? "flyway-mysql" : "flyway";
 }

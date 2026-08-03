@@ -259,27 +259,15 @@ function isSatisfied(catalog: Catalog, requirement: string, effectiveModuleIds: 
   }
   return effectiveModuleIds.includes(requirement);
 }
-
 export function capabilityProviders(catalog: Catalog, capability: string): ModuleManifest[] {
   return [...catalog.modules.values()].filter((m) => m.provides === capability);
 }
-
 export interface ResolutionResult {
   moduleIds: string[];
   added: string[];
   problems: string[];
 }
-
-// undefined = couldn't resolve (non-interactive, or the user declined) — the caller reports the
-// candidates as a problem instead of guessing.
 export type ProviderPicker = (capability: string, candidates: ModuleManifest[]) => Promise<string | undefined>;
-
-// Auto-resolves + auto-orders a requested module list against the catalog's own
-// requires/provides/conflicts metadata: a post-order DFS over requestedIds resolves each
-// module's requirements before the module itself, which alone gives correct topological
-// ordering (no more "list it earlier" errors). A capability requirement with more than one
-// provider is delegated to pickProvider (asked at most once per capability per resolution
-// pass — the answer is cached and reused for every other module needing the same capability).
 export async function resolveModules(
   catalog: Catalog,
   alreadyApplied: string[],
@@ -292,20 +280,12 @@ export async function resolveModules(
   const capabilityAnswers = new Map(preResolved);
   const ordered: string[] = [];
   const problems: string[] = [];
-
-  // If the user explicitly requested a module that provides some capability, treat that as the
-  // answer for that capability regardless of where it's listed in the batch — this is what
-  // makes e.g. `jloom add flyway-mysql mariadb` (dependency listed AFTER its dependent) just
-  // work instead of asking to disambiguate among every catalog provider of capability:
-  // relational-db. preResolved (explicit --database/--cache-provider style answers) still wins
-  // if both are somehow set.
   for (const id of requestedIds) {
     const manifest = catalog.modules.get(id);
     if (manifest?.provides !== undefined && !capabilityAnswers.has(manifest.provides)) {
       capabilityAnswers.set(manifest.provides, id);
     }
   }
-
   async function resolveRequirement(requirement: string): Promise<void> {
     if (isSatisfied(catalog, requirement, [...resolved])) return;
     if (!requirement.startsWith("capability:")) {
@@ -337,7 +317,6 @@ export async function resolveModules(
     capabilityAnswers.set(requirement, chosen);
     await resolveId(chosen);
   }
-
   async function resolveId(id: string): Promise<void> {
     if (resolved.has(id)) return;
     const manifest = catalog.modules.get(id);
@@ -358,11 +337,9 @@ export async function resolveModules(
     ordered.push(id);
     resolved.add(id);
   }
-
   for (const id of requestedIds) {
     await resolveId(id);
   }
-
   const effective = [...alreadyApplied, ...ordered];
   for (const id of ordered) {
     const manifest = catalog.modules.get(id);
@@ -373,13 +350,7 @@ export async function resolveModules(
       }
     }
   }
-
-  // "added" = resolved beyond what was literally requested — computed at the end (not tracked
-  // during resolution) so it's correct regardless of the order dependencies were resolved in,
-  // e.g. `jloom add flyway-mysql mariadb` must never report "mariadb" as auto-added just
-  // because it happened to get pulled in while resolving flyway-mysql's requirement first.
   const requestedSet = new Set(requestedIds);
   const added = ordered.filter((id) => !requestedSet.has(id));
-
   return { moduleIds: ordered, added, problems };
 }
